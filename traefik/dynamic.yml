@@ -1,0 +1,12 @@
+# Dynamic configuration
+
+tls:
+  certificates:
+    - certFile: /run/secrets/cloudflare.crt
+      keyFile: /run/secrets/cloudflare.key
+
+  # stores:
+  #   default:
+  #     defaultCertificate:
+  #       certFile: /run/secrets/cloudflare.crt
+  #       keyFile: /run/secrets/cloudflare.key

@@ -1,0 +1,65 @@
+services:
+  ca-backend:
+    image: ghcr.io/android-sms-gateway/ca-backend:latest
+    environment:
+      - HTTP__ADDRESS=:3000
+      - HTTP__PROXY_HEADER=${HTTP__PROXY_HEADER}
+      - HTTP__PROXIES=${HTTP__PROXIES}
+      - STORAGE__URL=redis://redis:6379/0
+      - CSR__TTL=${CSR__TTL:-24h}
+      - CSR__CA_CERT_PATH=${CSR__CA_CERT_PATH:-/run/secrets/ca.crt}
+      - CSR__CA_KEY_PATH=${CSR__CA_KEY_PATH:-/run/secrets/ca.key}
+    networks:
+      - internal
+      - public
+    secrets:
+      - ca.crt
+      - ca.key
+    deploy:
+      labels:
+        - "traefik.enable=true"
+
+        - "traefik.http.routers.ca-backend.rule=Host(`ca.${ROOT_DOMAIN}`)"
+        - "traefik.http.routers.ca-backend.entrypoints=https"
+        - "traefik.http.routers.ca-backend.tls=true"
+        
+        - "traefik.http.routers.ca-backend_limited.rule=Host(`ca.${ROOT_DOMAIN}`) && Method(`POST`)"
+        - "traefik.http.routers.ca-backend_limited.entrypoints=https"
+        - "traefik.http.routers.ca-backend_limited.tls=true"
+        - "traefik.http.routers.ca-backend_limited.middlewares=rate-limit_1-per-1m"
+        
+        - "traefik.http.middlewares.rate-limit_1-per-1m.ratelimit.average=1"
+        - "traefik.http.middlewares.rate-limit_1-per-1m.ratelimit.period=1m"
+        - "traefik.http.middlewares.rate-limit_1-per-1m.ratelimit.sourcecriterion.ipstrategy.depth=1"
+
+        - "traefik.http.services.ca-backend.loadbalancer.server.port=3000"
+      replicas: 1
+      resources:
+        reservations:
+          memory: 32M
+        limits:
+          memory: 64M
+      restart_policy:
+        condition: on-failure
+        window: 15s
+      update_config:
+        order: start-first
+        monitor: 15s
+        failure_action: rollback
+      rollback_config:
+        order: start-first
+        monitor: 15s
+
+secrets:
+  ca.crt:
+    name: root-ca.crt
+    external: true
+  ca.key:
+    name: root-ca.key
+    external: true
+   
+networks:
+  internal:
+    external: true
+  public:
+    external: true
