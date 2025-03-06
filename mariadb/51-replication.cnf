@@ -1,0 +1,13 @@
+[mariadbd]
+# The following can be used as easy to replay backup logs or for replication.
+# note: if you are setting up a replica, see README.Debian about other
+#       settings you may need to change.
+server-id                       = 21
+report-host                     = mdb21
+log_basename                    = mariadb
+log_bin
+expire_logs_days                = 7 
+max_binlog_size                 = 128M
+log_bin_compress                = ON
+
+read_only                       = ON
