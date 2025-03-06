@@ -26,6 +26,7 @@ services:
     image: mariadb:lts
     environment:
       - MARIADB_ROOT_PASSWORD_FILE=/run/secrets/mariadb_root_password
+      - MARIADB_AUTO_UPGRADE
     healthcheck:
       test:
         [
@@ -41,6 +42,9 @@ services:
       - mariadb-data:/var/lib/mysql
     networks:
       - internal
+    configs:
+      - source: db-51-replication.cnf
+        target: /etc/mysql/mariadb.conf.d/51-replication.cnf
     secrets:
       - mariadb_root_password
     deploy:
@@ -135,6 +139,9 @@ configs:
   dynamic.yml:
     name: dynamic.yml_${STACK_VERSION:-0}
     file: traefik/dynamic.yml
+  db-51-replication.cnf:
+    name: db-51-replication.cnf_${STACK_VERSION:-0}
+    file: mariadb/51-replication.cnf
 
 secrets:
   mariadb_root_password:
