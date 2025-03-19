@@ -59,7 +59,7 @@ scrape_configs:
         filters:
           - name: label
             values:
-              - prometheus.enabled
+              - prometheus.enable
 
     relabel_configs:
       # Only keep containers that should be running.
