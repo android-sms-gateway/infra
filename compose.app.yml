@@ -1,4 +1,60 @@
 services:
+  backend:
+    image: capcom6/sms-gateway:latest
+    environment:
+      - CONFIG_PATH=config.yml
+      - HTTP__PROXIES=${HTTP__PROXIES}
+      - DATABASE__HOST=${BACKEND__DATABASE__HOST}
+      - DATABASE__USER=${BACKEND__DATABASE__USER}
+      - DATABASE__PASSWORD=${BACKEND__DATABASE__PASSWORD}
+      - DATABASE__DATABASE=${BACKEND__DATABASE__DATABASE}
+      - DATABASE__MAX_OPEN_CONNS=${BACKEND__DATABASE__MAX_OPEN_CONNS}
+      - DATABASE__MAX_IDLE_CONNS=${BACKEND__DATABASE__MAX_IDLE_CONNS}
+      - FCM__CREDENTIALS_JSON=${FCM__CREDENTIALS_JSON}
+    configs:
+      - source: backend_config-yml
+        target: /app/config.yml
+    networks:
+      - internal
+      - public
+    deploy:
+      labels:
+        - "prometheus.enable=true"
+        - "traefik.enable=true"
+        
+        - "traefik.http.middlewares.rate-limit_5-per-1m.ratelimit.average=5"
+        - "traefik.http.middlewares.rate-limit_5-per-1m.ratelimit.period=1m"
+        - "traefik.http.middlewares.rate-limit_5-per-1m.ratelimit.sourcecriterion.ipstrategy.depth=1"
+        
+        - "traefik.http.middlewares.backend-addprefix.addprefix.prefix=/api"
+        
+        - "traefik.http.routers.backend.entrypoints=https"
+        - "traefik.http.routers.backend.middlewares=backend-addprefix"
+        - "traefik.http.routers.backend.rule=Host(`api.${ROOT_DOMAIN}`)"
+        - "traefik.http.routers.backend.tls.certresolver=le"
+
+        - "traefik.http.routers.backend_limited.entrypoints=https"
+        - "traefik.http.routers.backend_limited.middlewares=rate-limit_5-per-1m,backend-addprefix"
+        - "traefik.http.routers.backend_limited.rule=Host(`api.${ROOT_DOMAIN}`) && PathPrefix(`/mobile/v1/device`) && Method(`POST`)"
+        - "traefik.http.routers.backend_limited.tls.certresolver=le"
+        
+        - "traefik.http.services.backend.loadbalancer.server.port=3000"
+      replicas: 1
+      resources:
+        reservations:
+          memory: 32M
+        limits:
+          memory: 64M
+      restart_policy:
+        condition: on-failure
+        window: 15s
+      update_config:
+        order: start-first
+        monitor: 15s
+        failure_action: rollback
+      rollback_config:
+        order: start-first
+        monitor: 15s
   ca-backend:
     image: ghcr.io/android-sms-gateway/ca-backend:latest
     environment:
@@ -49,6 +105,11 @@ services:
       rollback_config:
         order: start-first
         monitor: 15s
+
+configs:
+  backend_config-yml:
+    name: app_backend_config-yml_${STACK_VERSION:-0}
+    file: backend/config.yml
 
 secrets:
   ca.crt:
