@@ -1,6 +1,6 @@
 services:
   backend:
-    image: capcom6/sms-gateway:latest
+    image: ghcr.io/android-sms-gateway/server:latest
     environment:
       - CONFIG_PATH=config.yml
       - HTTP__PROXIES=${HTTP__PROXIES}
