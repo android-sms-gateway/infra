@@ -67,6 +67,8 @@ certificatesResolvers:
 api:
   insecure: false
   dashboard: true
-accessLog: {}
+accessLog:
+  format: json
 log:
   level: WARN
+  format: json
