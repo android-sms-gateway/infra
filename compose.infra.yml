@@ -69,7 +69,7 @@ services:
       - MARIADB__USER=backup
       - MARIADB__PASSWORD=${DB_BACKUP__PASSWORD}
       - MARIADB__BACKUP_OPTIONS=${DB_BACKUP__OPTIONS}
-      - STORAGE_URL=${DB_BACKUP__STORAGE_URL}
+      - STORAGE__URL=${DB_BACKUP__STORAGE_URL}
     volumes:
       - mariadb-data:/var/lib/mysql
     networks:
@@ -85,9 +85,9 @@ services:
         condition: none
       resources:
         reservations:
-          memory: 32M
+          memory: 256M
         limits:
-          memory: 32M
+          memory: 256M
       placement:
         constraints:
           - node.role == manager
