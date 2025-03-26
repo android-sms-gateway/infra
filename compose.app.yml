@@ -38,6 +38,11 @@ services:
         - "traefik.http.routers.backend_limited.rule=Host(`api.${ROOT_DOMAIN}`) && PathPrefix(`/mobile/v1/device`) && Method(`POST`)"
         - "traefik.http.routers.backend_limited.tls.certresolver=le"
         
+        - "traefik.http.routers.backend_limited-user.entrypoints=https"
+        - "traefik.http.routers.backend_limited-user.middlewares=rate-limit_5-per-1m,backend-addprefix"
+        - "traefik.http.routers.backend_limited-user.rule=Host(`api.${ROOT_DOMAIN}`) && PathPrefix(`/mobile/v1/user`)"
+        - "traefik.http.routers.backend_limited-user.tls.certresolver=le"
+        
         - "traefik.http.services.backend.loadbalancer.server.port=3000"
       replicas: 1
       resources:
