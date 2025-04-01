@@ -2,12 +2,14 @@ services:
   backend:
     image: ghcr.io/android-sms-gateway/server:latest
     environment:
+      - TZ=${TIMEZONE:-UTC}
       - CONFIG_PATH=config.yml
       - HTTP__PROXIES=${HTTP__PROXIES}
       - DATABASE__HOST=${BACKEND__DATABASE__HOST}
       - DATABASE__USER=${BACKEND__DATABASE__USER}
       - DATABASE__PASSWORD=${BACKEND__DATABASE__PASSWORD}
       - DATABASE__DATABASE=${BACKEND__DATABASE__DATABASE}
+      - DATABASE__TIMEZONE=${TIMEZONE:-UTC}
       - DATABASE__MAX_OPEN_CONNS=${BACKEND__DATABASE__MAX_OPEN_CONNS}
       - DATABASE__MAX_IDLE_CONNS=${BACKEND__DATABASE__MAX_IDLE_CONNS}
       - FCM__CREDENTIALS_JSON=${FCM__CREDENTIALS_JSON}
@@ -63,6 +65,7 @@ services:
   ca-backend:
     image: ghcr.io/android-sms-gateway/ca-backend:latest
     environment:
+      - TZ=${TIMEZONE:-UTC}
       - HTTP__ADDRESS=:3000
       - HTTP__PROXY_HEADER=${HTTP__PROXY_HEADER}
       - HTTP__PROXIES=${HTTP__PROXIES}
