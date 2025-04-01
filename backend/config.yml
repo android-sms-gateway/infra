@@ -2,7 +2,6 @@ http:
   listen: 0.0.0.0:3000
 database:
   port: 3306
-  timezone: "Europe/Moscow"
 fcm:
   timeout_seconds: 1
   debounce_seconds: 5

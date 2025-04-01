@@ -1,6 +1,8 @@
 services:
   redis:
     image: redis:7
+    environment:
+      - "TZ=${TIMEZONE:-UTC}"
     volumes:
       - redis-data:/data
     healthcheck:
@@ -25,6 +27,7 @@ services:
   db:
     image: mariadb:lts
     environment:
+      - "TZ=${TIMEZONE:-UTC}"
       - MARIADB_ROOT_PASSWORD_FILE=/run/secrets/mariadb_root_password
       - MARIADB_AUTO_UPGRADE
     healthcheck:
@@ -62,6 +65,7 @@ services:
   db-backup:
     image: ghcr.io/capcom6/mariadb-backup-s3:latest
     environment:
+      - "TZ=${TIMEZONE:-UTC}"
       - AWS_REGION=${DB_BACKUP__AWS_REGION}
       - AWS_ACCESS_KEY=${DB_BACKUP__AWS_ACCESS_KEY_ID}
       - AWS_SECRET_KEY=${DB_BACKUP__AWS_SECRET_ACCESS_KEY}
@@ -95,6 +99,7 @@ services:
   db-admin:
     image: bitnami/phpmyadmin:5
     environment:
+      - "TZ=${TIMEZONE:-UTC}"
       - DATABASE_HOST=db
     networks:
       - public
@@ -135,6 +140,8 @@ services:
     secrets:
       - cloudflare.crt
       - cloudflare.key
+    environment:
+      - "TZ=${TIMEZONE:-UTC}"
     volumes:
       - "letsencrypt:/letsencrypt"
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
