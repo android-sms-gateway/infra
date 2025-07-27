@@ -53,7 +53,7 @@ services:
         limits:
           memory: 64M
       restart_policy:
-        condition: on-failure
+        condition: any
         window: 15s
       update_config:
         order: start-first
@@ -104,7 +104,7 @@ services:
         limits:
           memory: 64M
       restart_policy:
-        condition: on-failure
+        condition: any
         window: 15s
       update_config:
         order: start-first
