@@ -35,3 +35,15 @@ http:
         middlewares:
           - monitoring-metrics-ip-whitelist
           - monitoring-metrics-auth
+
+    rate-limit-5-per-1m:
+      rateLimit:
+        average: 5
+        period: 1m
+        sourcecriterion:
+          ipstrategy:
+            depth: 1
+
+    backend-addprefix:
+      addPrefix:
+        prefix: /api
