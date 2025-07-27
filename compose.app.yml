@@ -1,19 +1,21 @@
 services:
+  # Production backend service
   backend:
     image: ghcr.io/android-sms-gateway/server:latest
     environment:
       - TZ=${TIMEZONE:-UTC}
       - CONFIG_PATH=config.yml
       - HTTP__PROXIES=${HTTP__PROXIES}
-      - DATABASE__HOST=${BACKEND__DATABASE__HOST}
-      - DATABASE__USER=${BACKEND__DATABASE__USER}
-      - DATABASE__PASSWORD=${BACKEND__DATABASE__PASSWORD}
-      - DATABASE__DATABASE=${BACKEND__DATABASE__DATABASE}
       - DATABASE__TIMEZONE=${TIMEZONE:-UTC}
       - DATABASE__MAX_OPEN_CONNS=${BACKEND__DATABASE__MAX_OPEN_CONNS:-0}
       - DATABASE__MAX_IDLE_CONNS=${BACKEND__DATABASE__MAX_IDLE_CONNS:-0}
       - FCM__CREDENTIALS_JSON=${FCM__CREDENTIALS_JSON}
       
+      - DATABASE__HOST=${BACKEND__DATABASE__HOST}
+      - DATABASE__USER=${BACKEND__DATABASE__USER}
+      - DATABASE__PASSWORD=${BACKEND__DATABASE__PASSWORD}
+      - DATABASE__DATABASE=${BACKEND__DATABASE__DATABASE}
+
     configs:
       - source: backend_config-yml
         target: /app/config.yml
@@ -22,40 +24,27 @@ services:
       - public
     deploy:
       labels:
-        - "prometheus.io/scrape=true"
-        - "prometheus.io/port=3000"
-        - "prometheus.io/job=backend"
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+        prometheus.io/job: "backend"
 
-        - "traefik.enable=true"
-        
-        - "traefik.http.middlewares.rate-limit_5-per-1m.ratelimit.average=5"
-        - "traefik.http.middlewares.rate-limit_5-per-1m.ratelimit.period=1m"
-        - "traefik.http.middlewares.rate-limit_5-per-1m.ratelimit.sourcecriterion.ipstrategy.depth=1"
-        
-        - "traefik.http.middlewares.backend-addprefix.addprefix.prefix=/api"
-        
-        - "traefik.http.routers.backend.entrypoints=https"
-        - "traefik.http.routers.backend.middlewares=backend-addprefix"
-        - "traefik.http.routers.backend.rule=Host(`api.${ROOT_DOMAIN}`)"
-        - "traefik.http.routers.backend.tls.certresolver=le"
+        traefik.enable: "true"
+        traefik.http.services.backend.loadbalancer.server.port: "3000"
 
-        - "traefik.http.routers.backend_limited.entrypoints=https"
-        - "traefik.http.routers.backend_limited.middlewares=rate-limit_5-per-1m,backend-addprefix"
-        - "traefik.http.routers.backend_limited.rule=Host(`api.${ROOT_DOMAIN}`) && PathPrefix(`/mobile/v1/device`) && Method(`POST`)"
-        - "traefik.http.routers.backend_limited.tls.certresolver=le"
-        
-        - "traefik.http.routers.backend_limited-user.entrypoints=https"
-        - "traefik.http.routers.backend_limited-user.middlewares=rate-limit_5-per-1m,backend-addprefix"
-        - "traefik.http.routers.backend_limited-user.rule=Host(`api.${ROOT_DOMAIN}`) && PathPrefix(`/mobile/v1/user`)"
-        - "traefik.http.routers.backend_limited-user.tls.certresolver=le"
-        
-        - "traefik.http.services.backend.loadbalancer.server.port=3000"
-        
-        # Metrics endpoint with access control
-        - "traefik.http.routers.backend_metrics.entrypoints=https"
-        - "traefik.http.routers.backend_metrics.middlewares=monitoring-metrics-access-control@file"
-        - "traefik.http.routers.backend_metrics.rule=Host(`api.${ROOT_DOMAIN}`) && PathPrefix(`/metrics`)"
-        - "traefik.http.routers.backend_metrics.tls.certresolver=le"
+        traefik.http.routers.backend.entrypoints: "https"
+        traefik.http.routers.backend.middlewares: "backend-addprefix@file"
+        traefik.http.routers.backend.rule: "Host(`api.${ROOT_DOMAIN}`)"
+        traefik.http.routers.backend.tls: "true"
+
+        traefik.http.routers.backend_limited.entrypoints: "https"
+        traefik.http.routers.backend_limited.middlewares: "rate-limit-5-per-1m@file,backend-addprefix@file"
+        traefik.http.routers.backend_limited.rule: "Host(`api.${ROOT_DOMAIN}`) && PathPrefix(`/mobile/v1/device`) && Method(`POST`)"
+        traefik.http.routers.backend_limited.tls: "true"
+
+        traefik.http.routers.backend_limited-user.entrypoints: "https"
+        traefik.http.routers.backend_limited-user.middlewares: "rate-limit-5-per-1m@file,backend-addprefix@file"
+        traefik.http.routers.backend_limited-user.rule: "Host(`api.${ROOT_DOMAIN}`) && PathPrefix(`/mobile/v1/user`)"
+        traefik.http.routers.backend_limited-user.tls: "true"
       replicas: 1
       resources:
         reservations:
@@ -72,6 +61,69 @@ services:
       rollback_config:
         order: start-first
         monitor: 15s
+
+  staging:
+    image: ghcr.io/android-sms-gateway/server:latest
+    environment:
+      - TZ=${TIMEZONE:-UTC}
+      - CONFIG_PATH=config.yml
+      - HTTP__PROXIES=${HTTP__PROXIES}
+      - DATABASE__TIMEZONE=${TIMEZONE:-UTC}
+      - DATABASE__MAX_OPEN_CONNS=${STAGING__DATABASE__MAX_OPEN_CONNS:-0}
+      - DATABASE__MAX_IDLE_CONNS=${STAGING__DATABASE__MAX_IDLE_CONNS:-0}
+      - FCM__CREDENTIALS_JSON=${FCM__CREDENTIALS_JSON}
+      
+      - DATABASE__HOST=${STAGING__DATABASE__HOST}
+      - DATABASE__USER=${STAGING__DATABASE__USER}
+      - DATABASE__PASSWORD=${STAGING__DATABASE__PASSWORD}
+      - DATABASE__DATABASE=${STAGING__DATABASE__DATABASE}
+
+    configs:
+      - source: backend_config-yml
+        target: /app/config.yml
+    networks:
+      - internal
+      - public
+    deploy:
+      labels:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+        prometheus.io/job: "backend"
+
+        traefik.enable: "true"
+        traefik.http.services.backend-staging.loadbalancer.server.port: "3000"
+
+        traefik.http.routers.backend-staging.entrypoints: "https"
+        traefik.http.routers.backend-staging.middlewares: "backend-addprefix@file"
+        traefik.http.routers.backend-staging.rule: "Host(`staging.${ROOT_DOMAIN}`)"
+        traefik.http.routers.backend-staging.tls: "true"
+
+        traefik.http.routers.backend-staging_limited.entrypoints: "https"
+        traefik.http.routers.backend-staging_limited.middlewares: "rate-limit-5-per-1m@file,backend-addprefix@file"
+        traefik.http.routers.backend-staging_limited.rule: "Host(`staging.${ROOT_DOMAIN}`) && PathPrefix(`/mobile/v1/device`) && Method(`POST`)"
+        traefik.http.routers.backend-staging_limited.tls: "true"
+
+        traefik.http.routers.backend-staging_limited-user.entrypoints: "https"
+        traefik.http.routers.backend-staging_limited-user.middlewares: "rate-limit-5-per-1m@file,backend-addprefix@file"
+        traefik.http.routers.backend-staging_limited-user.rule: "Host(`staging.${ROOT_DOMAIN}`) && PathPrefix(`/mobile/v1/user`)"
+        traefik.http.routers.backend-staging_limited-user.tls: "true"
+      replicas: 1
+      resources:
+        reservations:
+          memory: 32M
+        limits:
+          memory: 64M
+      restart_policy:
+        condition: any
+        window: 15s
+      update_config:
+        order: start-first
+        monitor: 15s
+        failure_action: rollback
+      rollback_config:
+        order: start-first
+        monitor: 15s
+
   ca-backend:
     image: ghcr.io/android-sms-gateway/ca-backend:latest
     environment:
@@ -91,32 +143,39 @@ services:
       - ca.key
     deploy:
       labels:
-        - "prometheus.io/scrape=true"
-        - "prometheus.io/port=3000"
-        - "prometheus.io/job=ca"
-        
-        - "traefik.enable=true"
+        # Prometheus
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+        prometheus.io/job: "ca"
 
-        - "traefik.http.routers.ca-backend.rule=Host(`ca.${ROOT_DOMAIN}`)"
-        - "traefik.http.routers.ca-backend.entrypoints=https"
-        - "traefik.http.routers.ca-backend.tls=true"
-        
-        - "traefik.http.routers.ca-backend_limited.rule=Host(`ca.${ROOT_DOMAIN}`) && Method(`POST`)"
-        - "traefik.http.routers.ca-backend_limited.entrypoints=https"
-        - "traefik.http.routers.ca-backend_limited.tls=true"
-        - "traefik.http.routers.ca-backend_limited.middlewares=rate-limit_1-per-1m"
-        
-        - "traefik.http.middlewares.rate-limit_1-per-1m.ratelimit.average=1"
-        - "traefik.http.middlewares.rate-limit_1-per-1m.ratelimit.period=1m"
-        - "traefik.http.middlewares.rate-limit_1-per-1m.ratelimit.sourcecriterion.ipstrategy.depth=1"
+        # Traefik
+        traefik.docker.network: "public"
+        traefik.enable: "true"
 
-        - "traefik.http.services.ca-backend.loadbalancer.server.port=3000"
-        
-        # Metrics endpoint with access control
-        - "traefik.http.routers.ca-backend_metrics.entrypoints=https"
-        - "traefik.http.routers.ca-backend_metrics.middlewares=monitoring-metrics-access-control@file"
-        - "traefik.http.routers.ca-backend_metrics.rule=Host(`ca.${ROOT_DOMAIN}`) && PathPrefix(`/metrics`)"
-        - "traefik.http.routers.ca-backend_metrics.tls=true"
+        # Primary routes
+        traefik.http.routers.ca-backend.rule: "Host(`ca.${ROOT_DOMAIN}`)"
+        traefik.http.routers.ca-backend.entrypoints: "https"
+        traefik.http.routers.ca-backend.tls: "true"
+
+        # Limited certificate issuance
+        traefik.http.routers.ca-backend_limited.rule: "Host(`ca.${ROOT_DOMAIN}`) && Method(`POST`)"
+        traefik.http.routers.ca-backend_limited.entrypoints: "https"
+        traefik.http.routers.ca-backend_limited.tls: "true"
+        traefik.http.routers.ca-backend_limited.middlewares: "rate-limit_1-per-1m"
+
+        # Rate limit
+        traefik.http.middlewares.rate-limit_1-per-1m.ratelimit.average: "1"
+        traefik.http.middlewares.rate-limit_1-per-1m.ratelimit.period: "1m"
+        traefik.http.middlewares.rate-limit_1-per-1m.ratelimit.sourcecriterion.ipstrategy.depth: "1"
+
+        # Service definition
+        traefik.http.services.ca-backend.loadbalancer.server.port: "3000"
+
+        # Metrics protection
+        traefik.http.routers.ca-backend_metrics.entrypoints: "https"
+        traefik.http.routers.ca-backend_metrics.middlewares: "monitoring-metrics-access-control@file"
+        traefik.http.routers.ca-backend_metrics.rule: "Host(`ca.${ROOT_DOMAIN}`) && PathPrefix(`/metrics`)"
+        traefik.http.routers.ca-backend_metrics.tls: "true"
       replicas: 1
       resources:
         reservations:
