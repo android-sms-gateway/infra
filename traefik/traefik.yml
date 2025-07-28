@@ -38,8 +38,9 @@ entryPoints:
         - 131.0.72.0/22
     transport:
       respondingTimeouts:
-        writeTimeout: 60s
+        writeTimeout: 0s # disable to keep long-lived SSE connections open
         readTimeout: 60s
+        idleTimeout: 3600s # for SSE
 
 certificatesResolvers:
   le:
