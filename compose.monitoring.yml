@@ -3,7 +3,7 @@ services:
     image: prom/prometheus
     volumes:
       - prometheus_data:/prometheus
-      - /var/run/docker.sock:/var/run/docker.sock:rw
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     configs:
       - source: prometheus.yml
         target: /etc/prometheus/prometheus.yml
@@ -14,31 +14,24 @@ services:
       - "--web.console.templates=/usr/share/prometheus/consoles"
     networks:
       - internal
+      - public
     user: root
     deploy:
       placement:
         constraints:
           - node.role==manager
       restart_policy:
-        condition: on-failure
-
-  node-exporter:
-    image: prom/node-exporter
-    volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
-    command:
-      - "--path.procfs=/host/proc"
-      - "--path.sysfs=/host/sys"
-      - --collector.filesystem.ignored-mount-points
-      - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
-    networks:
-      - internal
-    deploy:
-      mode: global
-      restart_policy:
-        condition: on-failure
+        condition: any
+      labels:
+        - "traefik.enable=true"
+        - "traefik.swarm.network=public"
+        - "traefik.http.routers.prometheus.rule=Host(`prom.${ROOT_DOMAIN}`)"
+        - "traefik.http.routers.prometheus.entrypoints=https"
+        - "traefik.http.routers.prometheus.tls.certresolver=le"
+        - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+        - "traefik.http.middlewares.prometheus-ipallowlist.ipallowlist.ipStrategy.depth=1"
+        - "traefik.http.middlewares.prometheus-ipallowlist.ipallowlist.sourcerange=${PROMETHEUS__IP_ALLOWLIST}"
+        - "traefik.http.routers.prometheus.middlewares=prometheus-ipallowlist"
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor
@@ -52,38 +45,42 @@ services:
     deploy:
       mode: global
       restart_policy:
-        condition: on-failure
-
-  grafana:
-    image: grafana/grafana
-    depends_on:
-      - prometheus
-    volumes:
-      - grafana_data:/var/lib/grafana
-      # - ./grafana/provisioning/:/etc/grafana/provisioning/
-    # env_file:
-    # - ./grafana/config.monitoring
-    networks:
-      - internal
-      - public
-    user: "472"
-    deploy:
-      placement:
-        constraints:
-          - node.role==manager
+        condition: any
       labels:
-        - "traefik.enable=true"
-        - "traefik.docker.network=public"
-        - "traefik.http.routers.grafana.rule=Host(`mon.sms-gate.app`)"
-        - "traefik.http.routers.grafana.entrypoints=https"
-        - "traefik.http.routers.grafana.tls.certresolver=le"
-        - "traefik.http.services.grafana.loadbalancer.server.port=3000"
-      restart_policy:
-        condition: on-failure
+        - "prometheus.io/scrape=true"
+        - "prometheus.io/port=8080"
+        - "prometheus.io/job=cadvisor"
+
+  # grafana:
+  #   image: grafana/grafana
+  #   depends_on:
+  #     - prometheus
+  #   volumes:
+  #     - grafana_data:/var/lib/grafana
+  #     # - ./grafana/provisioning/:/etc/grafana/provisioning/
+  #   # env_file:
+  #   # - ./grafana/config.monitoring
+  #   networks:
+  #     - internal
+  #     - public
+  #   user: "472"
+  #   deploy:
+  #     placement:
+  #       constraints:
+  #         - node.role==manager
+  #     labels:
+  #       - "traefik.enable=true"
+  #       - "traefik.docker.network=public"
+  #       - "traefik.http.routers.grafana.rule=Host(`mon.${ROOT_DOMAIN}`)"
+  #       - "traefik.http.routers.grafana.entrypoints=https"
+  #       - "traefik.http.routers.grafana.tls.certresolver=le"
+  #       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+  #     restart_policy:
+  #       condition: any
 
 volumes:
   prometheus_data: {}
-  grafana_data: {}
+  # grafana_data: {}
 
 networks:
   public:
@@ -93,4 +90,5 @@ networks:
 
 configs:
   prometheus.yml:
+    name: prometheus.yml_${STACK_VERSION:-0}
     file: prometheus/prometheus.yml
