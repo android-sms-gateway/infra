@@ -50,6 +50,13 @@ services:
         - "traefik.http.routers.backend_limited-user.tls.certresolver=le"
         
         - "traefik.http.services.backend.loadbalancer.server.port=3000"
+        
+        # Metrics endpoint with access control
+        - "traefik.http.routers.backend_metrics.entrypoints=https"
+        - "traefik.http.routers.backend_metrics.middlewares=monitoring-metrics-access-control@file"
+        - "traefik.http.routers.backend_metrics.rule=Host(`api.${ROOT_DOMAIN}`) && PathPrefix(`/metrics`)"
+        - "traefik.http.routers.backend_metrics.tls.certresolver=le"
+        - "traefik.http.services.backend_metrics.loadbalancer.server.port=3000"
       replicas: 1
       resources:
         reservations:
@@ -85,6 +92,10 @@ services:
       - ca.key
     deploy:
       labels:
+        - "prometheus.io/scrape=true"
+        - "prometheus.io/port=3000"
+        - "prometheus.io/job=ca"
+        
         - "traefik.enable=true"
 
         - "traefik.http.routers.ca-backend.rule=Host(`ca.${ROOT_DOMAIN}`)"
@@ -101,6 +112,13 @@ services:
         - "traefik.http.middlewares.rate-limit_1-per-1m.ratelimit.sourcecriterion.ipstrategy.depth=1"
 
         - "traefik.http.services.ca-backend.loadbalancer.server.port=3000"
+        
+        # Metrics endpoint with access control
+        - "traefik.http.routers.ca-backend_metrics.entrypoints=https"
+        - "traefik.http.routers.ca-backend_metrics.middlewares=monitoring-metrics-access-control@file"
+        - "traefik.http.routers.ca-backend_metrics.rule=Host(`ca.${ROOT_DOMAIN}`) && PathPrefix(`/metrics`)"
+        - "traefik.http.routers.ca-backend_metrics.tls=true"
+        - "traefik.http.services.ca-backend_metrics.loadbalancer.server.port=3000"
       replicas: 1
       resources:
         reservations:

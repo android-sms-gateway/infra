@@ -140,8 +140,10 @@ services:
     secrets:
       - cloudflare.crt
       - cloudflare.key
+      - metrics.htpasswd
     environment:
       - "TZ=${TIMEZONE:-UTC}"
+      - "METRICS_IP_WHITELIST=${TRAEFIK__METRICS_IP_WHITELIST}"
     volumes:
       - "letsencrypt:/letsencrypt"
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
@@ -211,6 +213,9 @@ secrets:
     external: true
   cloudflare.key:
     name: cloudflare.key
+    external: true
+  metrics.htpasswd:
+    name: metrics.htpasswd
     external: true
 
 networks:
