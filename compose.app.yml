@@ -56,7 +56,6 @@ services:
         - "traefik.http.routers.backend_metrics.middlewares=monitoring-metrics-access-control@file"
         - "traefik.http.routers.backend_metrics.rule=Host(`api.${ROOT_DOMAIN}`) && PathPrefix(`/metrics`)"
         - "traefik.http.routers.backend_metrics.tls.certresolver=le"
-        - "traefik.http.services.backend_metrics.loadbalancer.server.port=3000"
       replicas: 1
       resources:
         reservations:
@@ -118,7 +117,6 @@ services:
         - "traefik.http.routers.ca-backend_metrics.middlewares=monitoring-metrics-access-control@file"
         - "traefik.http.routers.ca-backend_metrics.rule=Host(`ca.${ROOT_DOMAIN}`) && PathPrefix(`/metrics`)"
         - "traefik.http.routers.ca-backend_metrics.tls=true"
-        - "traefik.http.services.ca-backend_metrics.loadbalancer.server.port=3000"
       replicas: 1
       resources:
         reservations:
