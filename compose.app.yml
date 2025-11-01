@@ -10,7 +10,7 @@ services:
       - DATABASE__MAX_OPEN_CONNS=${BACKEND__DATABASE__MAX_OPEN_CONNS:-0}
       - DATABASE__MAX_IDLE_CONNS=${BACKEND__DATABASE__MAX_IDLE_CONNS:-0}
       - FCM__CREDENTIALS_JSON=${FCM__CREDENTIALS_JSON}
-      
+
       - DATABASE__HOST=${BACKEND__DATABASE__HOST}
       - DATABASE__USER=${BACKEND__DATABASE__USER}
       - DATABASE__PASSWORD=${BACKEND__DATABASE__PASSWORD}
@@ -62,51 +62,32 @@ services:
         order: start-first
         monitor: 15s
 
-  staging:
+  worker:
     image: ghcr.io/android-sms-gateway/server:latest
+    command: ["/app/app", "worker"]
     environment:
       - TZ=${TIMEZONE:-UTC}
       - CONFIG_PATH=config.yml
-      - HTTP__PROXIES=${HTTP__PROXIES}
       - DATABASE__TIMEZONE=${TIMEZONE:-UTC}
-      - DATABASE__MAX_OPEN_CONNS=${STAGING__DATABASE__MAX_OPEN_CONNS:-0}
-      - DATABASE__MAX_IDLE_CONNS=${STAGING__DATABASE__MAX_IDLE_CONNS:-0}
-      - FCM__CREDENTIALS_JSON=${FCM__CREDENTIALS_JSON}
-      
-      - DATABASE__HOST=${STAGING__DATABASE__HOST}
-      - DATABASE__USER=${STAGING__DATABASE__USER}
-      - DATABASE__PASSWORD=${STAGING__DATABASE__PASSWORD}
-      - DATABASE__DATABASE=${STAGING__DATABASE__DATABASE}
+      - DATABASE__MAX_OPEN_CONNS=${BACKEND__DATABASE__MAX_OPEN_CONNS:-0}
+      - DATABASE__MAX_IDLE_CONNS=${BACKEND__DATABASE__MAX_IDLE_CONNS:-0}
+
+      - DATABASE__HOST=${BACKEND__DATABASE__HOST}
+      - DATABASE__USER=${BACKEND__DATABASE__USER}
+      - DATABASE__PASSWORD=${BACKEND__DATABASE__PASSWORD}
+      - DATABASE__DATABASE=${BACKEND__DATABASE__DATABASE}
 
     configs:
       - source: backend_config-yml
         target: /app/config.yml
     networks:
       - internal
-      - public
     deploy:
       labels:
         prometheus.io/scrape: "true"
         prometheus.io/port: "3000"
-        prometheus.io/job: "backend"
+        prometheus.io/job: "worker"
 
-        traefik.enable: "true"
-        traefik.http.services.backend-staging.loadbalancer.server.port: "3000"
-
-        traefik.http.routers.backend-staging.entrypoints: "https"
-        traefik.http.routers.backend-staging.middlewares: "backend-addprefix@file"
-        traefik.http.routers.backend-staging.rule: "Host(`staging.${ROOT_DOMAIN}`)"
-        traefik.http.routers.backend-staging.tls: "true"
-
-        traefik.http.routers.backend-staging_limited.entrypoints: "https"
-        traefik.http.routers.backend-staging_limited.middlewares: "rate-limit-5-per-1m@file,backend-addprefix@file"
-        traefik.http.routers.backend-staging_limited.rule: "Host(`staging.${ROOT_DOMAIN}`) && PathPrefix(`/mobile/v1/device`) && Method(`POST`)"
-        traefik.http.routers.backend-staging_limited.tls: "true"
-
-        traefik.http.routers.backend-staging_limited-user.entrypoints: "https"
-        traefik.http.routers.backend-staging_limited-user.middlewares: "rate-limit-5-per-1m@file,backend-addprefix@file"
-        traefik.http.routers.backend-staging_limited-user.rule: "Host(`staging.${ROOT_DOMAIN}`) && PathPrefix(`/mobile/v1/user`)"
-        traefik.http.routers.backend-staging_limited-user.tls: "true"
       replicas: 1
       resources:
         reservations:
@@ -117,11 +98,11 @@ services:
         condition: any
         window: 15s
       update_config:
-        order: start-first
+        order: stop-first
         monitor: 15s
         failure_action: rollback
       rollback_config:
-        order: start-first
+        order: stop-first
         monitor: 15s
 
   ca-backend:
@@ -205,7 +186,7 @@ secrets:
   ca.key:
     name: root-ca.key
     external: true
-   
+
 networks:
   internal:
     external: true
