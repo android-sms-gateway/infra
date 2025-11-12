@@ -64,7 +64,8 @@ services:
 
   worker:
     image: ghcr.io/android-sms-gateway/server:latest
-    command: ["/app/app", "worker"]
+    entrypoint: ["/app/app"]
+    command: ["worker"]
     environment:
       - TZ=${TIMEZONE:-UTC}
       - CONFIG_PATH=config.yml
