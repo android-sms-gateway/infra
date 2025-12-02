@@ -37,7 +37,7 @@ services:
           "healthcheck.sh",
           "--su-mysql",
           "--connect",
-          "--innodb_initialized"
+          "--innodb_initialized",
         ]
       timeout: 5s
       retries: 10
@@ -61,7 +61,7 @@ services:
       placement:
         constraints:
           - node.role == manager
-  
+
   db-backup:
     image: ghcr.io/capcom6/mariadb-backup-s3:latest
     environment:
@@ -110,7 +110,7 @@ services:
         - "traefik.swarm.network=public"
         - "traefik.http.routers.db-admin.rule=Host(`pma.${ROOT_DOMAIN}`)"
         - "traefik.http.routers.db-admin.entrypoints=https"
-        - "traefik.http.routers.db-admin.tls=true"
+        - "traefik.http.routers.db-admin.tls.certresolver=le"
         - "traefik.http.routers.db-admin.middlewares=db-admin-auth"
         - "traefik.http.middlewares.db-admin-auth.basicauth.users=${DB_ADMIN_AUTH}"
         - "traefik.http.services.db-admin.loadbalancer.server.port=8080"
@@ -119,7 +119,6 @@ services:
           memory: 128M
         reservations:
           memory: 64M
-
 
   traefik:
     image: traefik:v3
@@ -192,7 +191,7 @@ volumes:
   redis-data:
   mariadb-data:
   letsencrypt:
-    
+
 configs:
   traefik.yml:
     name: traefik.yml_${STACK_VERSION:-0}
