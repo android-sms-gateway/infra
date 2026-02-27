@@ -34,17 +34,17 @@ services:
         traefik.http.routers.backend.entrypoints: "https"
         traefik.http.routers.backend.middlewares: "backend-addprefix@file"
         traefik.http.routers.backend.rule: "Host(`api.${ROOT_DOMAIN}`)"
-        traefik.http.routers.backend.tls: "true"
+        traefik.http.routers.backend.tls.certresolver: "le"
 
         traefik.http.routers.backend_limited.entrypoints: "https"
         traefik.http.routers.backend_limited.middlewares: "rate-limit-5-per-1m@file,backend-addprefix@file"
         traefik.http.routers.backend_limited.rule: "Host(`api.${ROOT_DOMAIN}`) && PathPrefix(`/mobile/v1/device`) && Method(`POST`)"
-        traefik.http.routers.backend_limited.tls: "true"
+        traefik.http.routers.backend_limited.tls.certresolver: "le"
 
         traefik.http.routers.backend_limited-user.entrypoints: "https"
         traefik.http.routers.backend_limited-user.middlewares: "rate-limit-5-per-1m@file,backend-addprefix@file"
         traefik.http.routers.backend_limited-user.rule: "Host(`api.${ROOT_DOMAIN}`) && PathPrefix(`/mobile/v1/user`)"
-        traefik.http.routers.backend_limited-user.tls: "true"
+        traefik.http.routers.backend_limited-user.tls.certresolver: "le"
       replicas: 1
       resources:
         reservations:
@@ -137,12 +137,12 @@ services:
         # Primary routes
         traefik.http.routers.ca-backend.rule: "Host(`ca.${ROOT_DOMAIN}`)"
         traefik.http.routers.ca-backend.entrypoints: "https"
-        traefik.http.routers.ca-backend.tls: "true"
+        traefik.http.routers.ca-backend.tls.certresolver: "le"
 
         # Limited certificate issuance
         traefik.http.routers.ca-backend_limited.rule: "Host(`ca.${ROOT_DOMAIN}`) && Method(`POST`)"
         traefik.http.routers.ca-backend_limited.entrypoints: "https"
-        traefik.http.routers.ca-backend_limited.tls: "true"
+        traefik.http.routers.ca-backend_limited.tls.certresolver: "le"
         traefik.http.routers.ca-backend_limited.middlewares: "rate-limit_1-per-1m"
 
         # Rate limit
