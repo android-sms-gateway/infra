@@ -1,15 +1,15 @@
 # Dynamic configuration
 
-tls: {}
-  # certificates:
-  #   - certFile: /run/secrets/cloudflare.crt
-  #     keyFile: /run/secrets/cloudflare.key
+# tls: {}
+# certificates:
+#   - certFile: /run/secrets/cloudflare.crt
+#     keyFile: /run/secrets/cloudflare.key
 
-  # stores:
-  #   default:
-  #     defaultCertificate:
-  #       certFile: /run/secrets/cloudflare.crt
-  #       keyFile: /run/secrets/cloudflare.key
+# stores:
+#   default:
+#     defaultCertificate:
+#       certFile: /run/secrets/cloudflare.crt
+#       keyFile: /run/secrets/cloudflare.key
 
 # Metrics access control middlewares
 http:
@@ -36,14 +36,89 @@ http:
           - monitoring-metrics-ip-whitelist
           - monitoring-metrics-auth
 
-    rate-limit-5-per-1m:
-      rateLimit:
-        average: 5
-        period: 1m
-        sourcecriterion:
-          ipstrategy:
-            depth: 1
-
     backend-addprefix:
       addPrefix:
         prefix: /api
+
+    # 3rdparty API
+    backend-3rdparty-removeprefix:
+      removePrefix:
+        prefixes:
+          - /3rdparty
+
+    backend-3rdparty-addprefix:
+      addPrefix:
+        prefix: /3rdparty
+
+    backend-3rdparty-ratelimit:
+      rateLimit:
+        average: 1
+        period: 1s
+        burst: 10000
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
+
+    backend-3rdparty:
+      chain:
+        middlewares:
+          - backend-3rdparty-ratelimit
+          - backend-3rdparty-removeprefix
+          - backend-3rdparty-addprefix
+          - backend-addprefix
+
+    # Upstream API
+    backend-upstream-addprefix:
+      addPrefix:
+        prefix: /upstream
+
+    backend-upstream-ratelimit:
+      rateLimit:
+        average: 5
+        period: 1m
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
+
+    backend-upstream:
+      chain:
+        middlewares:
+          - backend-upstream-ratelimit
+          - backend-upstream-addprefix
+          - backend-addprefix
+
+    # Mobile API
+    backend-mobile-addprefix:
+      addPrefix:
+        prefix: /mobile
+
+    backend-mobile-ratelimit:
+      rateLimit:
+        average: 5
+        period: 1s
+        burst: 100
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
+
+    backend-mobile-register-ratelimit:
+      rateLimit:
+        average: 5
+        period: 1m
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
+
+    backend-mobile:
+      chain:
+        middlewares:
+          - backend-mobile-ratelimit
+          - backend-mobile-addprefix
+          - backend-addprefix
+
+    backend-mobile-register:
+      chain:
+        middlewares:
+          - backend-mobile-register-ratelimit
+          - backend-mobile-addprefix
+          - backend-addprefix
