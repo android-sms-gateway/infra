@@ -51,7 +51,7 @@ services:
         traefik.http.routers.backend-mobile-register.middlewares: "backend-mobile-register@file"
         traefik.http.routers.backend-mobile-register.rule: "Host(`${MOBILE_SUBDOMAIN}.${ROOT_DOMAIN}`) && Path(`/v1/device`) && Method(`POST`)"
         traefik.http.routers.backend-mobile-register.tls.certresolver: "le"
-      replicas: 1
+      replicas: 0
       resources:
         reservations:
           memory: 32M
@@ -95,7 +95,7 @@ services:
         prometheus.io/port: "3000"
         prometheus.io/job: "worker"
 
-      replicas: 1
+      replicas: 0
       resources:
         reservations:
           memory: 32M
@@ -137,7 +137,7 @@ services:
         prometheus.io/job: "ca"
 
         # Traefik
-        traefik.docker.network: "public"
+        traefik.swarm.network: "public"
         traefik.enable: "true"
 
         # Primary routes
@@ -163,7 +163,62 @@ services:
         traefik.http.routers.ca-backend_metrics.entrypoints: "https"
         traefik.http.routers.ca-backend_metrics.middlewares: "monitoring-metrics-access-control@file"
         traefik.http.routers.ca-backend_metrics.rule: "Host(`ca.${ROOT_DOMAIN}`) && PathPrefix(`/metrics`)"
-        traefik.http.routers.ca-backend_metrics.tls: "true"
+        traefik.http.routers.ca-backend_metrics.tls.certresolver: "le"
+      replicas: 0
+      resources:
+        reservations:
+          memory: 32M
+        limits:
+          memory: 64M
+      restart_policy:
+        condition: any
+        window: 15s
+      update_config:
+        order: start-first
+        monitor: 15s
+        failure_action: rollback
+      rollback_config:
+        order: start-first
+        monitor: 15s
+
+  smpp-server:
+    image: ghcr.io/android-sms-gateway/smpp-server:latest
+    environment:
+      - TZ=${TIMEZONE:-UTC}
+      - HTTP__ADDRESS=:3000
+      - SMPP__BIND_ADDRESS=:2775
+      - GATEWAY__API_BASE_URL=${SMPP__GATEWAY__API_BASE_URL:-http://backend:3000/api/3rdparty/v1}
+      - GATEWAY__WEBHOOK_BASE_URL=https://smpp.${ROOT_DOMAIN}
+      - GATEWAY__TIMEOUT=60s
+    networks:
+      - internal
+      - public
+    deploy:
+      labels:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+        prometheus.io/job: "smpp-server"
+
+        traefik.enable: "true"
+        traefik.swarm.network: "public"
+        traefik.http.services.smpp-server.loadbalancer.server.port: "3000"
+        # traefik.http.routers.smpp-server.entrypoints: "https"
+        # traefik.http.routers.smpp-server.rule: "Host(`smpp.${ROOT_DOMAIN}`)"
+        # traefik.http.routers.smpp-server.tls.certresolver: "le"
+
+        traefik.http.routers.smpp-server-metrics.entrypoints: "https"
+        traefik.http.routers.smpp-server-metrics.middlewares: "monitoring-metrics-access-control@file"
+        traefik.http.routers.smpp-server-metrics.rule: "Host(`smpp.${ROOT_DOMAIN}`) && PathPrefix(`/metrics`)"
+        traefik.http.routers.smpp-server-metrics.tls.certresolver: "le"
+
+        traefik.tcp.routers.smpp-server.rule: "HostSNI(`*`)"
+        traefik.tcp.routers.smpp-server.entrypoints: "smpp"
+        traefik.tcp.routers.smpp-server.tls: "false"
+        traefik.tcp.services.smpp-server.loadbalancer.server.port: "2775"
+
+        traefik.tcp.routers.smpps-server.rule: "HostSNI(`smpp.${ROOT_DOMAIN}`)"
+        traefik.tcp.routers.smpps-server.entrypoints: "smpps"
+        traefik.tcp.routers.smpps-server.tls.certresolver: "le"
       replicas: 1
       resources:
         reservations:
