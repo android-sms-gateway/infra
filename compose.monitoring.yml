@@ -70,7 +70,7 @@ services:
   #         - node.role==manager
   #     labels:
   #       - "traefik.enable=true"
-  #       - "traefik.docker.network=public"
+  #       - "traefik.swarm.network=public"
   #       - "traefik.http.routers.grafana.rule=Host(`mon.${ROOT_DOMAIN}`)"
   #       - "traefik.http.routers.grafana.entrypoints=https"
   #       - "traefik.http.routers.grafana.tls.certresolver=le"
