@@ -41,6 +41,14 @@ entryPoints:
         writeTimeout: 0s # disable to keep long-lived SSE connections open
         readTimeout: 60s
         idleTimeout: 3600s # for SSE
+    http:
+      tls:
+        certResolver: le
+
+  smpp:
+    address: ":2775"
+  smpps:
+    address: ":2776"
 
 certificatesResolvers:
   le:

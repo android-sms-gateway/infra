@@ -136,6 +136,14 @@ services:
         published: 80
         protocol: tcp
         mode: host
+      - target: 2775
+        published: 2775
+        protocol: tcp
+        mode: host
+      - target: 2776
+        published: 2776
+        protocol: tcp
+        mode: host
     secrets:
       - cloudflare.crt
       - cloudflare.key

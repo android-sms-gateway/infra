@@ -42,7 +42,7 @@ http:
 
     # 3rdparty API
     backend-3rdparty-removeprefix:
-      removePrefix:
+      stripPrefix:
         prefixes:
           - /3rdparty
 
