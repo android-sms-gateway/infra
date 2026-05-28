@@ -45,6 +45,10 @@ entryPoints:
       tls:
         certResolver: le
 
+  smtp:
+    address: ":587"
+  smtps:
+    address: ":465"
   smpp:
     address: ":2775"
   smpps:
