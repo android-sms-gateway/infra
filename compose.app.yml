@@ -236,6 +236,63 @@ services:
         order: start-first
         monitor: 15s
 
+  email-to-sms:
+    image: ghcr.io/android-sms-gateway/email-to-sms:latest
+    environment:
+      - TZ=${TIMEZONE:-UTC}
+      - HTTP__ADDRESS=:3000
+      - HTTP__PROXY_HEADER=${HTTP__PROXY_HEADER}
+      - HTTP__PROXIES=${HTTP__PROXIES}
+      - SMTP__HOST=0.0.0.0
+      - SMTP__PORT=587
+      - SMTP__DOMAIN=smtp.${ROOT_DOMAIN}
+      - SMSGATE__URL=${EMAIL_TO_SMS__GATEWAY__API_BASE_URL:-http://backend:3000/api/3rdparty/v1}
+      - SMSGATE__SKIP_PHONE_VALIDATION=false
+    networks:
+      - internal
+      - public
+    deploy:
+      labels:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+        prometheus.io/job: "email-to-sms"
+
+        traefik.enable: "true"
+        traefik.swarm.network: "public"
+
+        # SMTP (port 587, TCP passthrough, no TLS)
+        traefik.tcp.services.email-to-sms.loadbalancer.server.port: "587"
+        traefik.tcp.routers.email-to-sms-smtp.rule: "HostSNI(`*`)"
+        traefik.tcp.routers.email-to-sms-smtp.entrypoints: "smtp"
+
+        # SMTPS (port 465, TLS termination on Traefik via LE)
+        traefik.tcp.routers.email-to-sms-smtps.rule: "HostSNI(`smtp.${ROOT_DOMAIN}`)"
+        traefik.tcp.routers.email-to-sms-smtps.entrypoints: "smtps"
+        traefik.tcp.routers.email-to-sms-smtps.tls.certresolver: "le"
+
+        # HTTP metrics/health via HTTPS
+        traefik.http.services.email-to-sms.loadbalancer.server.port: "3000"
+        traefik.http.routers.email-to-sms-metrics.entrypoints: "https"
+        traefik.http.routers.email-to-sms-metrics.middlewares: "monitoring-metrics-access-control@file"
+        traefik.http.routers.email-to-sms-metrics.rule: "Host(`smtp.${ROOT_DOMAIN}`) && PathPrefix(`/metrics`)"
+        traefik.http.routers.email-to-sms-metrics.tls.certresolver: "le"
+      replicas: 1
+      resources:
+        reservations:
+          memory: 32M
+        limits:
+          memory: 64M
+      restart_policy:
+        condition: any
+        window: 15s
+      update_config:
+        order: start-first
+        monitor: 15s
+        failure_action: rollback
+      rollback_config:
+        order: start-first
+        monitor: 15s
+
 configs:
   backend_config-yml:
     name: app_backend_config-yml_${STACK_VERSION:-0}
