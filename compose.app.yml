@@ -349,6 +349,53 @@ services:
         order: start-first
         monitor: 15s
 
+  web-dashboard:
+    image: ghcr.io/android-sms-gateway/web-dashboard:latest
+    environment:
+      - TZ=${TIMEZONE:-UTC}
+      - HTTP__LISTEN=0.0.0.0:3000
+      - HTTP__PROXY_HEADER=${HTTP__PROXY_HEADER}
+      - HTTP__PROXIES=${HTTP__PROXIES}
+      - GATEWAY__URL=${WEB_DASHBOARD__GATEWAY__URL:-http://backend:3000/api/3rdparty/v1}
+      - GATEWAY__WEBHOOK_URL=https://dashboard.${ROOT_DOMAIN}/api/webhooks/callback
+    networks:
+      - internal
+      - public
+    deploy:
+      labels:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+        prometheus.io/job: "web-dashboard"
+
+        traefik.enable: "true"
+        traefik.swarm.network: "public"
+        traefik.http.services.web-dashboard.loadbalancer.server.port: "3000"
+
+        traefik.http.routers.web-dashboard.entrypoints: "https"
+        traefik.http.routers.web-dashboard.rule: "Host(`dashboard.${ROOT_DOMAIN}`)"
+        traefik.http.routers.web-dashboard.tls.certresolver: "le"
+
+        traefik.http.routers.web-dashboard-metrics.entrypoints: "https"
+        traefik.http.routers.web-dashboard-metrics.middlewares: "monitoring-metrics-access-control@file"
+        traefik.http.routers.web-dashboard-metrics.rule: "Host(`dashboard.${ROOT_DOMAIN}`) && PathPrefix(`/metrics`)"
+        traefik.http.routers.web-dashboard-metrics.tls.certresolver: "le"
+      replicas: 1
+      resources:
+        reservations:
+          memory: 32M
+        limits:
+          memory: 128M
+      restart_policy:
+        condition: any
+        window: 15s
+      update_config:
+        order: start-first
+        monitor: 15s
+        failure_action: rollback
+      rollback_config:
+        order: start-first
+        monitor: 15s
+
 configs:
   backend_config-yml:
     name: app_backend_config-yml_${STACK_VERSION:-0}
