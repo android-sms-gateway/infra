@@ -293,6 +293,62 @@ services:
         order: start-first
         monitor: 15s
 
+  webhook-tester:
+    image: ghcr.io/tarampampam/webhook-tester:2
+    environment:
+      - TZ=${TIMEZONE:-UTC}
+      - STORAGE_DRIVER=redis
+      - PUBSUB_DRIVER=redis
+      - REDIS_DSN=${WEBHOOK__REDIS_DSN:-redis://redis:6379/1}
+      - AUTO_CREATE_SESSIONS=true
+      - MAX_REQUEST_BODY_SIZE=10240
+      - SESSION_TTL=24h
+      - LOG_FORMAT=json
+    networks:
+      - internal
+      - public
+    deploy:
+      labels:
+        traefik.enable: "true"
+        traefik.swarm.network: "public"
+
+        traefik.http.routers.webhook-tester.rule: "Host(`webhook.${ROOT_DOMAIN}`)"
+        traefik.http.routers.webhook-tester.entrypoints: "https"
+        traefik.http.routers.webhook-tester.tls.certresolver: "le"
+        traefik.http.routers.webhook-tester.middlewares: "webhook-general-ratelimit"
+        traefik.http.services.webhook-tester.loadbalancer.server.port: "8080"
+
+        traefik.http.routers.webhook-tester-capture.rule: "Host(`webhook.${ROOT_DOMAIN}`) && PathRegexp(`^/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`)"
+        traefik.http.routers.webhook-tester-capture.entrypoints: "https"
+        traefik.http.routers.webhook-tester-capture.tls.certresolver: "le"
+        traefik.http.routers.webhook-tester-capture.middlewares: "webhook-capture-ratelimit"
+
+        traefik.http.middlewares.webhook-general-ratelimit.ratelimit.average: "10"
+        traefik.http.middlewares.webhook-general-ratelimit.ratelimit.period: "1s"
+        traefik.http.middlewares.webhook-general-ratelimit.ratelimit.burst: "20"
+        traefik.http.middlewares.webhook-general-ratelimit.ratelimit.sourcecriterion.ipstrategy.depth: "1"
+
+        traefik.http.middlewares.webhook-capture-ratelimit.ratelimit.average: "5"
+        traefik.http.middlewares.webhook-capture-ratelimit.ratelimit.period: "1s"
+        traefik.http.middlewares.webhook-capture-ratelimit.ratelimit.burst: "10"
+        traefik.http.middlewares.webhook-capture-ratelimit.ratelimit.sourcecriterion.ipstrategy.depth: "1"
+      replicas: 1
+      resources:
+        reservations:
+          memory: 32M
+        limits:
+          memory: 64M
+      restart_policy:
+        condition: any
+        window: 15s
+      update_config:
+        order: start-first
+        monitor: 15s
+        failure_action: rollback
+      rollback_config:
+        order: start-first
+        monitor: 15s
+
 configs:
   backend_config-yml:
     name: app_backend_config-yml_${STACK_VERSION:-0}
