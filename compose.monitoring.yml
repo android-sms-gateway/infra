@@ -29,7 +29,7 @@ services:
         - "traefik.http.routers.prometheus.entrypoints=https"
         - "traefik.http.routers.prometheus.tls.certresolver=le"
         - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
-        - "traefik.http.middlewares.prometheus-ipallowlist.ipallowlist.ipStrategy.depth=1"
+        - "traefik.http.middlewares.prometheus-ipallowlist.ipallowlist.ipStrategy.depth=0"
         - "traefik.http.middlewares.prometheus-ipallowlist.ipallowlist.sourcerange=${PROMETHEUS__IP_ALLOWLIST}"
         - "traefik.http.routers.prometheus.middlewares=prometheus-ipallowlist"
 

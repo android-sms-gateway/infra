@@ -154,7 +154,7 @@ services:
         # Rate limit
         traefik.http.middlewares.rate-limit_1-per-1m.ratelimit.average: "1"
         traefik.http.middlewares.rate-limit_1-per-1m.ratelimit.period: "1m"
-        traefik.http.middlewares.rate-limit_1-per-1m.ratelimit.sourcecriterion.ipstrategy.depth: "1"
+        traefik.http.middlewares.rate-limit_1-per-1m.ratelimit.sourcecriterion.ipstrategy.depth: "0"
 
         # Service definition
         traefik.http.services.ca-backend.loadbalancer.server.port: "3000"
@@ -326,12 +326,12 @@ services:
         traefik.http.middlewares.webhook-general-ratelimit.ratelimit.average: "10"
         traefik.http.middlewares.webhook-general-ratelimit.ratelimit.period: "1s"
         traefik.http.middlewares.webhook-general-ratelimit.ratelimit.burst: "20"
-        traefik.http.middlewares.webhook-general-ratelimit.ratelimit.sourcecriterion.ipstrategy.depth: "1"
+        traefik.http.middlewares.webhook-general-ratelimit.ratelimit.sourcecriterion.ipstrategy.depth: "0"
 
         traefik.http.middlewares.webhook-capture-ratelimit.ratelimit.average: "5"
         traefik.http.middlewares.webhook-capture-ratelimit.ratelimit.period: "1s"
         traefik.http.middlewares.webhook-capture-ratelimit.ratelimit.burst: "10"
-        traefik.http.middlewares.webhook-capture-ratelimit.ratelimit.sourcecriterion.ipstrategy.depth: "1"
+        traefik.http.middlewares.webhook-capture-ratelimit.ratelimit.sourcecriterion.ipstrategy.depth: "0"
       replicas: 1
       resources:
         reservations:
