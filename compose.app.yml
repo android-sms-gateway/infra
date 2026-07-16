@@ -51,7 +51,7 @@ services:
         traefik.http.routers.backend-mobile-register.middlewares: "backend-mobile-register@file"
         traefik.http.routers.backend-mobile-register.rule: "Host(`${MOBILE_SUBDOMAIN}.${ROOT_DOMAIN}`) && Path(`/v1/device`) && Method(`POST`)"
         traefik.http.routers.backend-mobile-register.tls.certresolver: "le"
-      replicas: 0
+      replicas: 1
       resources:
         reservations:
           memory: 32M
