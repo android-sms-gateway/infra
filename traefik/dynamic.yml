@@ -41,15 +41,6 @@ http:
         prefix: /api
 
     # 3rdparty API
-    backend-3rdparty-removeprefix:
-      stripPrefix:
-        prefixes:
-          - /3rdparty
-
-    backend-3rdparty-addprefix:
-      addPrefix:
-        prefix: /3rdparty
-
     backend-3rdparty-ratelimit:
       rateLimit:
         average: 1
@@ -63,15 +54,9 @@ http:
       chain:
         middlewares:
           - backend-3rdparty-ratelimit
-          - backend-3rdparty-removeprefix
-          - backend-3rdparty-addprefix
           - backend-addprefix
 
     # Upstream API
-    backend-upstream-addprefix:
-      addPrefix:
-        prefix: /upstream
-
     backend-upstream-ratelimit:
       rateLimit:
         average: 5
@@ -84,14 +69,9 @@ http:
       chain:
         middlewares:
           - backend-upstream-ratelimit
-          - backend-upstream-addprefix
           - backend-addprefix
 
     # Mobile API
-    backend-mobile-addprefix:
-      addPrefix:
-        prefix: /mobile
-
     backend-mobile-ratelimit:
       rateLimit:
         average: 5
@@ -113,12 +93,10 @@ http:
       chain:
         middlewares:
           - backend-mobile-ratelimit
-          - backend-mobile-addprefix
           - backend-addprefix
 
     backend-mobile-register:
       chain:
         middlewares:
           - backend-mobile-register-ratelimit
-          - backend-mobile-addprefix
           - backend-addprefix
