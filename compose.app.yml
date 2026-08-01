@@ -34,22 +34,22 @@ services:
 
         traefik.http.routers.backend-3rdparty.entrypoints: "https"
         traefik.http.routers.backend-3rdparty.middlewares: "backend-3rdparty@file"
-        traefik.http.routers.backend-3rdparty.rule: "Host(`${API_SUBDOMAIN}.${ROOT_DOMAIN}`)"
+        traefik.http.routers.backend-3rdparty.rule: "Host(`${API_SUBDOMAIN}.${ROOT_DOMAIN}`) && PathPrefix(`/3rdparty`)"
         traefik.http.routers.backend-3rdparty.tls.certresolver: "le"
 
         traefik.http.routers.backend-upstream.entrypoints: "https"
         traefik.http.routers.backend-upstream.middlewares: "backend-upstream@file"
-        traefik.http.routers.backend-upstream.rule: "Host(`${UPSTREAM_SUBDOMAIN}.${ROOT_DOMAIN}`)"
+        traefik.http.routers.backend-upstream.rule: "Host(`${API_SUBDOMAIN}.${ROOT_DOMAIN}`) && PathPrefix(`/upstream`)"
         traefik.http.routers.backend-upstream.tls.certresolver: "le"
 
         traefik.http.routers.backend-mobile.entrypoints: "https"
         traefik.http.routers.backend-mobile.middlewares: "backend-mobile@file"
-        traefik.http.routers.backend-mobile.rule: "Host(`${MOBILE_SUBDOMAIN}.${ROOT_DOMAIN}`)"
+        traefik.http.routers.backend-mobile.rule: "Host(`${API_SUBDOMAIN}.${ROOT_DOMAIN}`) && PathPrefix(`/mobile`)"
         traefik.http.routers.backend-mobile.tls.certresolver: "le"
 
         traefik.http.routers.backend-mobile-register.entrypoints: "https"
         traefik.http.routers.backend-mobile-register.middlewares: "backend-mobile-register@file"
-        traefik.http.routers.backend-mobile-register.rule: "Host(`${MOBILE_SUBDOMAIN}.${ROOT_DOMAIN}`) && Path(`/v1/device`) && Method(`POST`)"
+        traefik.http.routers.backend-mobile-register.rule: "Host(`${API_SUBDOMAIN}.${ROOT_DOMAIN}`) && PathPrefix(`/mobile/v1/device`) && Method(`POST`)"
         traefik.http.routers.backend-mobile-register.tls.certresolver: "le"
       replicas: 1
       resources:
