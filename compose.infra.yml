@@ -159,6 +159,7 @@ services:
     environment:
       - "TZ=${TIMEZONE:-UTC}"
       - "METRICS_IP_WHITELIST=${TRAEFIK__METRICS_IP_WHITELIST}"
+      - "CF_DNS_API_TOKEN=${TRAEFIK__CF_DNS_API_TOKEN}"
     volumes:
       - "letsencrypt:/letsencrypt"
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
