@@ -15,6 +15,8 @@ services:
       - DATABASE__USER=${BACKEND__DATABASE__USER}
       - DATABASE__PASSWORD=${BACKEND__DATABASE__PASSWORD}
       - DATABASE__DATABASE=${BACKEND__DATABASE__DATABASE}
+      - CACHE__URL=redis://redis:6379/0
+      - PUBSUB__URL=redis://redis:6379/0
 
     configs:
       - source: backend_config-yml
@@ -51,7 +53,7 @@ services:
         traefik.http.routers.backend-mobile-register.middlewares: "backend-mobile-register@file"
         traefik.http.routers.backend-mobile-register.rule: "Host(`${API_SUBDOMAIN}.${ROOT_DOMAIN}`) && PathPrefix(`/mobile/v1/device`) && Method(`POST`)"
         traefik.http.routers.backend-mobile-register.tls.certresolver: "cloudflare"
-      replicas: 1
+      replicas: 2
       resources:
         reservations:
           memory: 32M
@@ -83,6 +85,8 @@ services:
       - DATABASE__USER=${BACKEND__DATABASE__USER}
       - DATABASE__PASSWORD=${BACKEND__DATABASE__PASSWORD}
       - DATABASE__DATABASE=${BACKEND__DATABASE__DATABASE}
+      - CACHE__URL=redis://redis:6379/0
+      - PUBSUB__URL=redis://redis:6379/0
 
     configs:
       - source: backend_config-yml
