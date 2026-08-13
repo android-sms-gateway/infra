@@ -1,0 +1,85 @@
+groups:
+  - name: infra:alerts
+    rules:
+      - alert: PrometheusDown
+        expr: up{job="prometheus"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: prometheus
+        annotations:
+          summary: "Prometheus instance is down"
+          description: "Instance {{ $labels.instance }} (job prometheus) has been unreachable for more than 1 minute."
+
+      - alert: TraefikDown
+        expr: up{job="traefik"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: traefik
+        annotations:
+          summary: "Traefik instance is down"
+          description: "Instance {{ $labels.instance }} (job traefik) has been unreachable for more than 1 minute."
+
+      - alert: CadvisorDown
+        expr: up{job="cadvisor"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: cadvisor
+        annotations:
+          summary: "cAdvisor instance is down"
+          description: "Instance {{ $labels.instance }} (job cadvisor) has been unreachable for more than 1 minute."
+
+      - alert: AlertmanagerDown
+        expr: up{job="alertmanager"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: alertmanager
+        annotations:
+          summary: "Alertmanager instance is down"
+          description: "Instance {{ $labels.instance }} (job alertmanager) has been unreachable for more than 1 minute."
+
+  - name: cadvisor:alerts
+    rules:
+      - alert: ContainerHighCPUUsage
+        expr: avg by(instance, container_label_com_docker_swarm_service_name) (rate(container_cpu_usage_seconds_total{container_label_com_docker_swarm_service_name!=""}[5m])) * 100 > 80
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage in container {{ $labels.container_label_com_docker_swarm_service_name }} on {{ $labels.instance }}"
+          description: "CPU usage in container {{ $labels.container_label_com_docker_swarm_service_name }} on {{ $labels.instance }} has been above 80% of one core for more than 2 minutes."
+
+      - alert: ContainerHighMemoryUsage
+        expr: |
+          container_memory_working_set_bytes{container_label_com_docker_swarm_service_name!=""}
+            / container_spec_memory_limit_bytes{container_label_com_docker_swarm_service_name!=""}
+            > 0.85
+          and
+          container_spec_memory_limit_bytes{container_label_com_docker_swarm_service_name!=""} > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage in container {{ $labels.container_label_com_docker_swarm_service_name }} on {{ $labels.instance }}"
+          description: "Memory usage in container {{ $labels.container_label_com_docker_swarm_service_name }} on {{ $labels.instance }} has been above 85% of its memory limit for more than 2 minutes."
+
+      - alert: ContainerHighDiskUsage
+        expr: sum by(instance, container_label_com_docker_swarm_service_name) (container_fs_usage_bytes{container_label_com_docker_swarm_service_name!=""}) > 1073741824
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High disk usage in container {{ $labels.container_label_com_docker_swarm_service_name }} on {{ $labels.instance }}"
+          description: "Disk usage in container {{ $labels.container_label_com_docker_swarm_service_name }} on {{ $labels.instance }} has been above 1 GiB for more than 5 minutes."
+
+      - alert: ContainerHighNetworkUsage
+        expr: sum by(instance, container_label_com_docker_swarm_service_name) (rate(container_network_receive_bytes_total{container_label_com_docker_swarm_service_name!=""}[5m])) > 20971520
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High network usage in container {{ $labels.container_label_com_docker_swarm_service_name }} on {{ $labels.instance }}"
+          description: "Network receive rate in container {{ $labels.container_label_com_docker_swarm_service_name }} on {{ $labels.instance }} has been above 20 MiB/s for more than 5 minutes."

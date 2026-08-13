@@ -1,0 +1,191 @@
+groups:
+  - name: web-dashboard:alerts
+    interval: 30s
+    rules:
+      - alert: HighErrorRateCritical
+        expr: |
+          (
+            sum(rate(http_requests_total{job="web-dashboard",status_code=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total{job="web-dashboard"}[5m]))
+          ) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          team: sre
+          service: web-dashboard
+        annotations:
+          summary: "High HTTP 5xx error rate ({{ $value | humanizePercentage }})"
+          description: >
+            {{ $value | humanizePercentage }} of requests returned 5xx over the last 5 minutes.
+            Threshold: > 5%.
+
+      - alert: HighErrorRateWarning
+        expr: |
+          (
+            sum(rate(http_requests_total{job="web-dashboard",status_code=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total{job="web-dashboard"}[5m]))
+          ) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+          team: sre
+          service: web-dashboard
+        annotations:
+          summary: "Elevated HTTP 5xx error rate ({{ $value | humanizePercentage }})"
+          description: >
+            {{ $value | humanizePercentage }} of requests returned 5xx over the last 5 minutes.
+            Threshold: > 1%. SLO breach risk.
+
+      - alert: ServiceDown
+        expr: up{job="web-dashboard"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: sre
+          service: web-dashboard
+        annotations:
+          summary: "web-dashboard instance is down"
+          description: >
+            Instance {{ $labels.instance }} has been unreachable for more than 1 minute.
+
+      - alert: RequestLatencyHighWarning
+        expr: |
+          histogram_quantile(
+            0.99,
+            sum(rate(http_request_duration_seconds_bucket{job="web-dashboard"}[5m])) by (le)
+          ) > 1
+        for: 5m
+        labels:
+          severity: warning
+          team: sre
+          service: web-dashboard
+        annotations:
+          summary: "p99 request latency exceeds 1s ({{ $value | humanizeDuration }})"
+          description: >
+            p99 latency is {{ $value | humanizeDuration }} over the last 5 minutes.
+            Threshold: > 1s.
+
+      - alert: RequestLatencyHighInfo
+        expr: |
+          histogram_quantile(
+            0.99,
+            sum(rate(http_request_duration_seconds_bucket{job="web-dashboard"}[5m])) by (le)
+          ) > 0.5
+        for: 10m
+        labels:
+          severity: info
+          team: sre
+          service: web-dashboard
+        annotations:
+          summary: "p99 request latency exceeds 500ms ({{ $value | humanizeDuration }})"
+          description: >
+            p99 latency is {{ $value | humanizeDuration }} over the last 10 minutes.
+            Threshold: > 500ms. Proactive observation.
+
+      - alert: MemoryUsageHigh
+        expr: process_resident_memory_bytes{job="web-dashboard"} > 500e6
+        for: 5m
+        labels:
+          severity: warning
+          team: sre
+          service: web-dashboard
+        annotations:
+          summary: "RSS memory exceeds 500 MB ({{ $value | humanize1024 }})"
+          description: >
+            Instance {{ $labels.instance }} RSS is {{ $value | humanize1024 }}.
+            Threshold: > 500 MB.
+
+      - alert: GoroutineCountHigh
+        expr: go_goroutines{job="web-dashboard"} > 1000
+        for: 5m
+        labels:
+          severity: warning
+          team: sre
+          service: web-dashboard
+        annotations:
+          summary: "Goroutine count exceeds 1000 ({{ $value }})"
+          description: >
+            Instance {{ $labels.instance }} has {{ $value }} goroutines.
+            Threshold: > 1000. Possible goroutine leak.
+
+      - alert: FileDescriptorsHigh
+        expr: process_open_fds{job="web-dashboard"} / process_max_fds{job="web-dashboard"} > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          team: sre
+          service: web-dashboard
+        annotations:
+          summary: "File descriptor usage exceeds 80% ({{ $value | humanizePercentage }})"
+          description: >
+            Instance {{ $labels.instance }} is using {{ $value | humanizePercentage }}
+            of available file descriptors. Threshold: > 80%.
+
+      - alert: UpstreamAPIErrorsCritical
+        expr: |
+          (
+            sum(rate(http_requests_total{job="web-dashboard",status_code=~"502|504"}[5m]))
+            /
+            sum(rate(http_requests_total{job="web-dashboard"}[5m]))
+          ) > 0.10
+        for: 2m
+        labels:
+          severity: critical
+          team: sre
+          service: web-dashboard
+        annotations:
+          summary: "Upstream SMSGate API unreachable ({{ $value | humanizePercentage }} 502/504)"
+          description: >
+            {{ $value | humanizePercentage }} of proxied requests returned 502/504 over 5m.
+            Threshold: > 10%. The upstream API at api.sms-gate.app may be down.
+
+      - alert: UpstreamAPIErrorsWarning
+        expr: |
+          (
+            sum(rate(http_requests_total{job="web-dashboard",status_code=~"502|504"}[5m]))
+            /
+            sum(rate(http_requests_total{job="web-dashboard"}[5m]))
+          ) > 0.02
+        for: 5m
+        labels:
+          severity: warning
+          team: sre
+          service: web-dashboard
+        annotations:
+          summary: "Elevated upstream SMSGate API errors ({{ $value | humanizePercentage }} 502/504)"
+          description: >
+            {{ $value | humanizePercentage }} of proxied requests returned 502/504 over 5m.
+            Threshold: > 2%. Degraded upstream connectivity.
+
+      - alert: TrafficDrop
+        expr: sum(rate(http_requests_total{job="web-dashboard"}[5m])) < 0.1
+        for: 10m
+        labels:
+          severity: info
+          team: sre
+          service: web-dashboard
+        annotations:
+          summary: "Traffic dropped to near zero ({{ $value | humanize }} RPS)"
+          description: >
+            Request rate is {{ $value | humanize }} over 5m.
+            Threshold: < 0.1 RPS. Possible routing, DNS, or load balancer issue.
+
+      - alert: TrafficSurge
+        expr: |
+          sum(rate(http_requests_total{job="web-dashboard"}[5m]))
+          /
+          avg_over_time(sum(rate(http_requests_total{job="web-dashboard"}[5m]))[7d:5m])
+          > 3
+        for: 5m
+        labels:
+          severity: info
+          team: sre
+          service: web-dashboard
+        annotations:
+          summary: "Traffic surged 3x above weekly baseline ({{ $value | humanize }} RPS)"
+          description: >
+            Current RPS is {{ $value | humanize }},
+            which is {{ $value }}x the 7-day baseline.
+            Threshold: > 3x. Possible abuse or viral event.

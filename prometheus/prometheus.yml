@@ -9,19 +9,20 @@ global:
   #     monitor: 'my-project'
 
 # Load and evaluate rules in this file every 'evaluation_interval' seconds.
-# rule_files:
-# - 'alert.rules'
-# - "first.rules"
-# - "second.rules"
+rule_files:
+  - "alert.rules.yml"
+  - "web-dashboard.rules.yml"
+  - "smpp-server.rules.yml"
+  - "smtp-server.rules.yml"
+  - "server.rules.yml"
 
 # alert
-# alerting:
-#   alertmanagers:
-#   - scheme: http
-#     static_configs:
-#     - targets:
-#       - "alertmanager:9093"
-
+alerting:
+  alertmanagers:
+    - scheme: http
+      static_configs:
+        - targets:
+            - "alertmanager:9093"
 # A scrape configuration containing exactly one endpoint to scrape:
 # Here it's Prometheus itself.
 scrape_configs:
@@ -74,23 +75,27 @@ scrape_configs:
         regex: ^$
         action: drop
 
+      # Strip port from task address to isolate IP
       - source_labels: [__address__]
         target_label: __address__
         regex: (.+):(\d+)
         replacement: $1
         action: replace
 
+      # Reconstruct address using IP + custom port from label
+      # (Multiple source_labels are joined with semicolons)
       - source_labels: [__address__, __port__]
         target_label: __address__
         regex: (.+);(\d+)
         replacement: $1:$2
         action: replace
 
+      # Set the job name based on the service label
       - source_labels: [__meta_dockerswarm_service_label_prometheus_io_job]
         target_label: job
         regex: (.+)
         replacement: $1
 
-      # Add service labels as task labels
+      # Set service_name label
       - source_labels: [__meta_dockerswarm_service_name]
         target_label: service_name
