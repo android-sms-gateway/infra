@@ -147,12 +147,12 @@ services:
         # Primary routes
         traefik.http.routers.ca-backend.rule: "Host(`ca.${ROOT_DOMAIN}`)"
         traefik.http.routers.ca-backend.entrypoints: "https"
-        traefik.http.routers.ca-backend.tls.certresolver: "le"
+        traefik.http.routers.ca-backend.tls.certresolver: "cloudflare"
 
         # Limited certificate issuance
         traefik.http.routers.ca-backend_limited.rule: "Host(`ca.${ROOT_DOMAIN}`) && Method(`POST`)"
         traefik.http.routers.ca-backend_limited.entrypoints: "https"
-        traefik.http.routers.ca-backend_limited.tls.certresolver: "le"
+        traefik.http.routers.ca-backend_limited.tls.certresolver: "cloudflare"
         traefik.http.routers.ca-backend_limited.middlewares: "rate-limit_1-per-1m"
 
         # Rate limit
@@ -167,7 +167,7 @@ services:
         traefik.http.routers.ca-backend_metrics.entrypoints: "https"
         traefik.http.routers.ca-backend_metrics.middlewares: "monitoring-metrics-access-control@file"
         traefik.http.routers.ca-backend_metrics.rule: "Host(`ca.${ROOT_DOMAIN}`) && PathPrefix(`/metrics`)"
-        traefik.http.routers.ca-backend_metrics.tls.certresolver: "le"
+        traefik.http.routers.ca-backend_metrics.tls.certresolver: "cloudflare"
       replicas: 0
       resources:
         reservations:
@@ -208,12 +208,12 @@ services:
         traefik.http.services.smpp-server.loadbalancer.server.port: "3000"
         # traefik.http.routers.smpp-server.entrypoints: "https"
         # traefik.http.routers.smpp-server.rule: "Host(`smpp.${ROOT_DOMAIN}`)"
-        # traefik.http.routers.smpp-server.tls.certresolver: "le"
+        # traefik.http.routers.smpp-server.tls.certresolver: "cloudflare"
 
         traefik.http.routers.smpp-server-metrics.entrypoints: "https"
         traefik.http.routers.smpp-server-metrics.middlewares: "monitoring-metrics-access-control@file"
         traefik.http.routers.smpp-server-metrics.rule: "Host(`smpp.${ROOT_DOMAIN}`) && PathPrefix(`/metrics`)"
-        traefik.http.routers.smpp-server-metrics.tls.certresolver: "le"
+        traefik.http.routers.smpp-server-metrics.tls.certresolver: "cloudflare"
 
         traefik.tcp.routers.smpp-server.rule: "HostSNI(`*`)"
         traefik.tcp.routers.smpp-server.entrypoints: "smpp"
@@ -222,7 +222,7 @@ services:
 
         traefik.tcp.routers.smpps-server.rule: "HostSNI(`smpp.${ROOT_DOMAIN}`)"
         traefik.tcp.routers.smpps-server.entrypoints: "smpps"
-        traefik.tcp.routers.smpps-server.tls.certresolver: "le"
+        traefik.tcp.routers.smpps-server.tls.certresolver: "cloudflare"
       replicas: 1
       resources:
         reservations:
@@ -272,14 +272,14 @@ services:
         # SMTPS (port 465, TLS termination on Traefik via LE)
         traefik.tcp.routers.email-to-sms-smtps.rule: "HostSNI(`smtp.${ROOT_DOMAIN}`)"
         traefik.tcp.routers.email-to-sms-smtps.entrypoints: "smtps"
-        traefik.tcp.routers.email-to-sms-smtps.tls.certresolver: "le"
+        traefik.tcp.routers.email-to-sms-smtps.tls.certresolver: "cloudflare"
 
         # HTTP metrics/health via HTTPS
         traefik.http.services.email-to-sms.loadbalancer.server.port: "3000"
         traefik.http.routers.email-to-sms-metrics.entrypoints: "https"
         traefik.http.routers.email-to-sms-metrics.middlewares: "monitoring-metrics-access-control@file"
         traefik.http.routers.email-to-sms-metrics.rule: "Host(`smtp.${ROOT_DOMAIN}`) && PathPrefix(`/metrics`)"
-        traefik.http.routers.email-to-sms-metrics.tls.certresolver: "le"
+        traefik.http.routers.email-to-sms-metrics.tls.certresolver: "cloudflare"
       replicas: 1
       resources:
         reservations:
@@ -318,13 +318,13 @@ services:
 
         traefik.http.routers.webhook-tester.rule: "Host(`webhook.${ROOT_DOMAIN}`)"
         traefik.http.routers.webhook-tester.entrypoints: "https"
-        traefik.http.routers.webhook-tester.tls.certresolver: "le"
+        traefik.http.routers.webhook-tester.tls.certresolver: "cloudflare"
         traefik.http.routers.webhook-tester.middlewares: "webhook-general-ratelimit"
         traefik.http.services.webhook-tester.loadbalancer.server.port: "8080"
 
         traefik.http.routers.webhook-tester-capture.rule: "Host(`webhook.${ROOT_DOMAIN}`) && PathRegexp(`^/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`)"
         traefik.http.routers.webhook-tester-capture.entrypoints: "https"
-        traefik.http.routers.webhook-tester-capture.tls.certresolver: "le"
+        traefik.http.routers.webhook-tester-capture.tls.certresolver: "cloudflare"
         traefik.http.routers.webhook-tester-capture.middlewares: "webhook-capture-ratelimit"
 
         traefik.http.middlewares.webhook-general-ratelimit.ratelimit.average: "10"
@@ -377,12 +377,12 @@ services:
 
         traefik.http.routers.web-dashboard.entrypoints: "https"
         traefik.http.routers.web-dashboard.rule: "Host(`dashboard.${ROOT_DOMAIN}`)"
-        traefik.http.routers.web-dashboard.tls.certresolver: "le"
+        traefik.http.routers.web-dashboard.tls.certresolver: "cloudflare"
 
         traefik.http.routers.web-dashboard-metrics.entrypoints: "https"
         traefik.http.routers.web-dashboard-metrics.middlewares: "monitoring-metrics-access-control@file"
         traefik.http.routers.web-dashboard-metrics.rule: "Host(`dashboard.${ROOT_DOMAIN}`) && PathPrefix(`/metrics`)"
-        traefik.http.routers.web-dashboard-metrics.tls.certresolver: "le"
+        traefik.http.routers.web-dashboard-metrics.tls.certresolver: "cloudflare"
       replicas: 1
       resources:
         reservations:
