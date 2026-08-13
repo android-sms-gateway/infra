@@ -53,7 +53,7 @@ services:
         traefik.http.routers.backend-mobile-register.middlewares: "backend-mobile-register@file"
         traefik.http.routers.backend-mobile-register.rule: "Host(`${API_SUBDOMAIN}.${ROOT_DOMAIN}`) && PathPrefix(`/mobile/v1/device`) && Method(`POST`)"
         traefik.http.routers.backend-mobile-register.tls.certresolver: "cloudflare"
-      replicas: 2
+      replicas: 1
       resources:
         reservations:
           memory: 32M
@@ -168,7 +168,7 @@ services:
         traefik.http.routers.ca-backend_metrics.middlewares: "monitoring-metrics-access-control@file"
         traefik.http.routers.ca-backend_metrics.rule: "Host(`ca.${ROOT_DOMAIN}`) && PathPrefix(`/metrics`)"
         traefik.http.routers.ca-backend_metrics.tls.certresolver: "cloudflare"
-      replicas: 0
+      replicas: 1
       resources:
         reservations:
           memory: 32M
