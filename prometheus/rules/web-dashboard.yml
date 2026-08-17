@@ -126,9 +126,9 @@ groups:
       - alert: UpstreamAPIErrorsCritical
         expr: |
           (
-            sum(rate(http_requests_total{job="web-dashboard",status_code=~"502|504"}[5m]))
+            sum(rate(http_requests_total{job="web-dashboard",path=~"/api/v1(/.*)?",status_code=~"502|504"}[5m]))
             /
-            sum(rate(http_requests_total{job="web-dashboard"}[5m]))
+            sum(rate(http_requests_total{job="web-dashboard",path=~"/api/v1(/.*)?"}[5m]))
           ) > 0.10
         for: 2m
         labels:
@@ -138,15 +138,15 @@ groups:
         annotations:
           summary: "Upstream SMSGate API unreachable ({{ $value | humanizePercentage }} 502/504)"
           description: >
-            {{ $value | humanizePercentage }} of proxied requests returned 502/504 over 5m.
-            Threshold: > 10%. The upstream API at api.sms-gate.app may be down.
+            {{ $value | humanizePercentage }} of gateway API requests returned 502/504 over 5m.
+            Threshold: > 10%. The backend SMSGate API may be unreachable or slow.
 
       - alert: UpstreamAPIErrorsWarning
         expr: |
           (
-            sum(rate(http_requests_total{job="web-dashboard",status_code=~"502|504"}[5m]))
+            sum(rate(http_requests_total{job="web-dashboard",path=~"/api/v1(/.*)?",status_code=~"502|504"}[5m]))
             /
-            sum(rate(http_requests_total{job="web-dashboard"}[5m]))
+            sum(rate(http_requests_total{job="web-dashboard",path=~"/api/v1(/.*)?"}[5m]))
           ) > 0.02
         for: 5m
         labels:
@@ -156,8 +156,8 @@ groups:
         annotations:
           summary: "Elevated upstream SMSGate API errors ({{ $value | humanizePercentage }} 502/504)"
           description: >
-            {{ $value | humanizePercentage }} of proxied requests returned 502/504 over 5m.
-            Threshold: > 2%. Degraded upstream connectivity.
+            {{ $value | humanizePercentage }} of gateway API requests returned 502/504 over 5m.
+            Threshold: > 2%. Degraded or slow upstream connectivity.
 
       - alert: TrafficDrop
         expr: sum(rate(http_requests_total{job="web-dashboard"}[5m])) < 0.1
