@@ -5,6 +5,7 @@ services:
     environment:
       - TZ=${TIMEZONE:-UTC}
       - CONFIG_PATH=config.yml
+      - HTTP__PROXY_HEADER=${HTTP__PROXY_HEADER:-X-Forwarded-For}
       - HTTP__PROXIES=${HTTP__PROXIES}
       - CACHE__URL=redis://redis:6379/0
       - PUBSUB__URL=redis://redis:6379/0
@@ -121,7 +122,7 @@ services:
     environment:
       - TZ=${TIMEZONE:-UTC}
       - HTTP__ADDRESS=:3000
-      - HTTP__PROXY_HEADER=${HTTP__PROXY_HEADER}
+      - HTTP__PROXY_HEADER=${HTTP__PROXY_HEADER:-X-Forwarded-For}
       - HTTP__PROXIES=${HTTP__PROXIES}
       - STORAGE__URL=redis://redis:6379/0
       - CSR__TTL=${CSR__TTL:-24h}
@@ -245,7 +246,7 @@ services:
     environment:
       - TZ=${TIMEZONE:-UTC}
       - HTTP__ADDRESS=:3000
-      - HTTP__PROXY_HEADER=${HTTP__PROXY_HEADER}
+      - HTTP__PROXY_HEADER=${HTTP__PROXY_HEADER:-X-Forwarded-For}
       - HTTP__PROXIES=${HTTP__PROXIES}
       - SMTP__HOST=0.0.0.0
       - SMTP__PORT=587
@@ -358,7 +359,7 @@ services:
     environment:
       - TZ=${TIMEZONE:-UTC}
       - HTTP__ADDRESS=0.0.0.0:3000
-      - HTTP__PROXY_HEADER=${HTTP__PROXY_HEADER}
+      - HTTP__PROXY_HEADER=${HTTP__PROXY_HEADER:-X-Forwarded-For}
       - HTTP__PROXIES=${HTTP__PROXIES}
       - GATEWAY__URL=${WEB_DASHBOARD__GATEWAY__URL:-http://backend:3000/api/3rdparty/v1}
       - WEBHOOKS__URL=https://dashboard.${ROOT_DOMAIN}/api/webhooks/callback
