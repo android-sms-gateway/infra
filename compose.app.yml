@@ -7,6 +7,8 @@ services:
       - CONFIG_PATH=config.yml
       - HTTP__PROXY_HEADER=${HTTP__PROXY_HEADER:-X-Forwarded-For}
       - HTTP__PROXIES=${HTTP__PROXIES}
+      - HTTP__OPENAPI__ENABLED=true
+      - HTTP__API__HOST=${API_SUBDOMAIN}.${ROOT_DOMAIN}
       - CACHE__URL=redis://redis:6379/0
       - PUBSUB__URL=redis://redis:6379/0
       - DATABASE__DATABASE=${BACKEND__DATABASE__DATABASE}
@@ -34,6 +36,11 @@ services:
         traefik.enable: "true"
         traefik.swarm.network: "public"
         traefik.http.services.backend.loadbalancer.server.port: "3000"
+
+        traefik.http.routers.backend-root.entrypoints: "https"
+        traefik.http.routers.backend-root.middlewares: "backend-addprefix@file"
+        traefik.http.routers.backend-root.rule: "Host(`${API_SUBDOMAIN}.${ROOT_DOMAIN}`)"
+        traefik.http.routers.backend-root.tls.certresolver: "cloudflare"
 
         traefik.http.routers.backend-3rdparty.entrypoints: "https"
         traefik.http.routers.backend-3rdparty.middlewares: "backend-3rdparty@file"
