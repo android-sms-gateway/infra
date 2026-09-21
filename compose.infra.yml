@@ -83,6 +83,15 @@ services:
     deploy:
       mode: replicated
       replicas: 1
+      labels:
+        - "traefik.enable=true"
+        - "traefik.swarm.network=internal"
+        - "traefik.tcp.routers.db.rule=HostSNI(`*`)"
+        - "traefik.tcp.routers.db.entrypoints=mysql"
+        - "traefik.tcp.routers.db.tls=false"
+        - "traefik.tcp.middlewares.db-ipwhitelist.ipallowlist.sourcerange=${DB__IP_ALLOWLIST}"
+        - "traefik.tcp.routers.db.middlewares=db-ipwhitelist"
+        - "traefik.tcp.services.db.loadbalancer.server.port=3306"
       resources:
         reservations:
           memory: 128M
@@ -183,6 +192,10 @@ services:
         mode: host
       - target: 2776
         published: 2776
+        protocol: tcp
+        mode: host
+      - target: 3306
+        published: 3306
         protocol: tcp
         mode: host
     secrets:

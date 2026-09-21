@@ -53,6 +53,8 @@ entryPoints:
     address: ":2775"
   smpps:
     address: ":2776"
+  mysql:
+    address: ":3306"
 
 certificatesResolvers:
   le:
