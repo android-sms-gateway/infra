@@ -136,6 +136,7 @@ After deployment, every public service is reachable at `<subdomain>.<ROOT_DOMAIN
 | `infra`      | `admin.`                 | Traefik dashboard     |
 | `infra`      | `pma.`                   | phpMyAdmin            |
 | `infra`      | `redis.`                 | Redis Commander       |
+| `infra`      | `db.`                    | MariaDB (direct)      |
 | `app`        | `api.` (`API_SUBDOMAIN`) | Backend API           |
 | `app`        | `ca.`                    | Certificate authority |
 | `app`        | `smpp.`                  | SMPP gateway          |
@@ -147,6 +148,8 @@ After deployment, every public service is reachable at `<subdomain>.<ROOT_DOMAIN
 | `monitoring` | `mon.`                   | Grafana               |
 
 Portainer is not routed through Traefik; it publishes port 9443 directly on manager nodes.
+
+`db.` exposes the MariaDB wire protocol (TCP 3306) as plain-TCP passthrough; connections are limited to the `DB__IP_ALLOWLIST` ranges via a Traefik TCP `ipAllowList` middleware. Point an A record at the manager/traefik node (do not proxy through Cloudflare, so client IPs stay visible to the allowlist), restrict port 3306 in the node firewall to the allowed ranges, and use a MariaDB user that permits remote login. Note `read_only=ON` from `mariadb/51-replication.cnf` makes remote sessions read-only unless the user has the `SUPER` privilege.
 
 ### Update configuration
 
