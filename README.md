@@ -44,7 +44,7 @@ Everything here is configuration-as-code: no application source code lives in th
 - **Rate limiting and access control**: per-route rate limits for API and webhook endpoints; basic auth and IP allowlists for dashboards and metrics.
 - **Scheduled database backups**: MariaDB dumps uploaded to S3 on a cron schedule via swarm-cronjob.
 - **Certificate authority**: `ca-backend` issues certificates signed by a root CA stored in Swarm secrets.
-- **Monitoring and alerting**: Prometheus scrapes labeled services; Alertmanager routes `critical` alerts to Telegram and `warning`/`info` to email; Grafana for visualization; cAdvisor runs globally on every node.
+- **Monitoring and alerting**: Prometheus scrapes labeled services; Alertmanager routes `critical` alerts to Telegram and `warning`/`info` to email; Grafana for visualization; cAdvisor and node_exporter run globally on every node, the latter exposing host metrics.
 - **Multi-node placement**: services pin to labeled nodes (`redis`, `db`, `traefik`, `cronjob`, `prometheus`, `grafana`, `portainer`).
 
 ## 🏗️ Architecture
@@ -55,7 +55,7 @@ Four stacks compose the deployment. The `infra` stack must be deployed first bec
 | ------------------------ | ------------ | ------------------------------------------------------------------------------------------ |
 | `compose.infra.yml`      | `infra`      | Traefik v3, MariaDB, Redis, phpMyAdmin, Redis Commander, S3 backup job, swarm-cronjob      |
 | `compose.app.yml`        | `app`        | Backend API + worker, ca-backend, smpp-server, email-to-sms, webhook-tester, web-dashboard |
-| `compose.monitoring.yml` | `monitoring` | Prometheus, Alertmanager, cAdvisor (global), Grafana                                       |
+| `compose.monitoring.yml` | `monitoring` | Prometheus, Alertmanager, cAdvisor (global), node_exporter (global), Grafana               |
 | `compose.portainer.yml`  | `portainer`  | Portainer CE (optional management UI) and its agent                                        |
 
 A full architecture diagram lives in the central docs: https://docs.sms-gate.app/
@@ -124,7 +124,7 @@ docker stack deploy -c compose.portainer.yml portainer
 
 - `infra` creates the `internal`/`public` overlay networks, the `redis-data`, `mariadb-data`, and `letsencrypt` volumes, and starts Traefik, MariaDB, Redis, Redis Commander, phpMyAdmin, and the cron scheduler.
 - `app` deploys the backend API, worker, CA backend, SMPP server, email-to-SMS gateway, webhook tester, and web dashboard. The `worker` service starts with zero replicas; scale it if background tasks are needed.
-- `monitoring` deploys Prometheus, Alertmanager, cAdvisor (global), and Grafana.
+- `monitoring` deploys Prometheus, Alertmanager, cAdvisor (global), node_exporter (global), and Grafana.
 - `portainer` deploys Portainer CE (published on port 9443, constrained to manager nodes) and a global agent on all Linux nodes.
 
 ### Exposed hostnames
