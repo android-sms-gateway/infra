@@ -402,11 +402,11 @@ services:
         window: 15s
       update_config:
         order: start-first
-        monitor: 15s
+        monitor: 45s
         failure_action: rollback
       rollback_config:
         order: start-first
-        monitor: 15s
+        monitor: 45s
 
 configs:
   backend_config-yml:
