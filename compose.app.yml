@@ -20,7 +20,7 @@ services:
       - DATABASE__USER=${BACKEND__DATABASE__USER}
       - FCM__CREDENTIALS_JSON=${FCM__CREDENTIALS_JSON}
       - MESSAGES__QUEUE__MAX_PENDING_AGE=24h
-      - JWT__SECRET_KEY=${BACKEND__JWT__SECRET_KEY}
+      - JWT__SECRET=${BACKEND__JWT__SECRET}
 
     configs:
       - source: backend_config-yml
