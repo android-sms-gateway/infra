@@ -107,3 +107,125 @@ tests:
             exp_annotations:
               summary: "Low available memory on node-b/task-1"
               description: "Available memory on node-b/task-1 has been below 300 MiB for more than 5 minutes."
+
+  # --- HostFilesystemLowAvailable / HostFilesystemCriticallyLow ---
+  # Thresholds (16 GiB reference disk unless noted): warning < 10% free (for 5m),
+  # critical < 5% free (for 1m); filesystems <= 2 GiB are ignored (boot/efi noise),
+  # and fstype tmpfs|overlay|squashfs|ramfs|devtmpfs is filtered out.
+  # Every test therefore feeds a matching node_filesystem_size_bytes series.
+
+  # 7. Warning firing, critical not: 1.5 GB / 16 GB = 9.4% free.
+  - interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{job="node", instance="sms-gate.app/task-1", device="/dev/vda1", fstype="xfs", mountpoint="/"}'
+        values: '1500000000x10'
+      - series: 'node_filesystem_size_bytes{job="node", instance="sms-gate.app/task-1", device="/dev/vda1", fstype="xfs", mountpoint="/"}'
+        values: '16000000000x10'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: HostFilesystemLowAvailable
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              job: node
+              instance: sms-gate.app/task-1
+              device: /dev/vda1
+              fstype: xfs
+              mountpoint: /
+            exp_annotations:
+              summary: "Low disk space on sms-gate.app/task-1"
+              description: "Filesystem / on sms-gate.app/task-1 has had less than 10% free space for more than 5 minutes."
+      - eval_time: 5m
+        alertname: HostFilesystemCriticallyLow
+        exp_alerts: []
+
+  # 8. Pending, not yet firing: warning at 4m, one minute short of `for: 5m`.
+  - interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{job="node", instance="sms-gate.app/task-1", device="/dev/vda1", fstype="xfs", mountpoint="/"}'
+        values: '1500000000x10'
+      - series: 'node_filesystem_size_bytes{job="node", instance="sms-gate.app/task-1", device="/dev/vda1", fstype="xfs", mountpoint="/"}'
+        values: '16000000000x10'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: HostFilesystemLowAvailable
+        exp_alerts: []
+
+  # 9. Boundary: exactly 10% free (1.6 GB / 16 GB) must NOT fire (strict <).
+  - interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{job="node", instance="sms-gate.app/task-1", device="/dev/vda1", fstype="xfs", mountpoint="/"}'
+        values: '1600000000x10'
+      - series: 'node_filesystem_size_bytes{job="node", instance="sms-gate.app/task-1", device="/dev/vda1", fstype="xfs", mountpoint="/"}'
+        values: '16000000000x10'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: HostFilesystemLowAvailable
+        exp_alerts: []
+
+  # 10. Critical firing: 500 MB / 16 GB = 3.1% free trips both critical (1m)
+  #     and warning (5m).
+  - interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{job="node", instance="sms-gate.app/task-1", device="/dev/vda1", fstype="xfs", mountpoint="/"}'
+        values: '500000000x10'
+      - series: 'node_filesystem_size_bytes{job="node", instance="sms-gate.app/task-1", device="/dev/vda1", fstype="xfs", mountpoint="/"}'
+        values: '16000000000x10'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: HostFilesystemCriticallyLow
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              job: node
+              instance: sms-gate.app/task-1
+              device: /dev/vda1
+              fstype: xfs
+              mountpoint: /
+            exp_annotations:
+              summary: "Critically low disk space on sms-gate.app/task-1"
+              description: "Filesystem / on sms-gate.app/task-1 has had less than 5% free space for more than 1 minute."
+      - eval_time: 5m
+        alertname: HostFilesystemLowAvailable
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              job: node
+              instance: sms-gate.app/task-1
+              device: /dev/vda1
+              fstype: xfs
+              mountpoint: /
+            exp_annotations:
+              summary: "Low disk space on sms-gate.app/task-1"
+              description: "Filesystem / on sms-gate.app/task-1 has had less than 10% free space for more than 5 minutes."
+
+  # 11. Filter proof: a low tmpfs must never alert (fstype filter).
+  - interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{job="node", instance="sms-gate.app/task-1", device="tmpfs", fstype="tmpfs", mountpoint="/run"}'
+        values: '100000000x10'
+      - series: 'node_filesystem_size_bytes{job="node", instance="sms-gate.app/task-1", device="tmpfs", fstype="tmpfs", mountpoint="/run"}'
+        values: '2000000000x10'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: HostFilesystemLowAvailable
+        exp_alerts: []
+      - eval_time: 6m
+        alertname: HostFilesystemCriticallyLow
+        exp_alerts: []
+
+  # 12. Size-floor proof: a 953 MiB filesystem (e.g. /boot or a 200 MiB ESP)
+  #     at ~5% free must NOT alert because it is at or below the 2 GiB floor.
+  - interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{job="node", instance="sms-gate.app/task-1", device="/dev/sda2", fstype="vfat", mountpoint="/boot/efi"}'
+        values: '50000000x10'
+      - series: 'node_filesystem_size_bytes{job="node", instance="sms-gate.app/task-1", device="/dev/sda2", fstype="vfat", mountpoint="/boot/efi"}'
+        values: '1000000000x10'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: HostFilesystemLowAvailable
+        exp_alerts: []
+      - eval_time: 10m
+        alertname: HostFilesystemCriticallyLow
+        exp_alerts: []
