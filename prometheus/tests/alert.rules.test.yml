@@ -205,7 +205,7 @@ tests:
       - series: 'node_filesystem_avail_bytes{job="node", instance="sms-gate.app/task-1", device="tmpfs", fstype="tmpfs", mountpoint="/run"}'
         values: '100000000x10'
       - series: 'node_filesystem_size_bytes{job="node", instance="sms-gate.app/task-1", device="tmpfs", fstype="tmpfs", mountpoint="/run"}'
-        values: '2000000000x10'
+        values: '3000000000x10'
     alert_rule_test:
       - eval_time: 6m
         alertname: HostFilesystemLowAvailable
