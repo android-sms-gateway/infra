@@ -23,6 +23,7 @@ services:
       - "--web.external-url=https://prometheus.${ROOT_DOMAIN}"
       - "--web.console.libraries=/usr/share/prometheus/console_libraries"
       - "--web.console.templates=/usr/share/prometheus/consoles"
+      - "--storage.tsdb.retention.time=7d"
     networks:
       - internal
       - public
