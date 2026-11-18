@@ -113,6 +113,7 @@ services:
       - MARIADB__PASSWORD=${DB_BACKUP__PASSWORD}
       - MARIADB__BACKUP_METHOD=${DB_BACKUP__BACKUP_METHOD:-mariadb-dump}
       - MARIADB__BACKUP_OPTIONS=${DB_BACKUP__OPTIONS}
+      - BACKUP__STREAM=${DB_BACKUP__STREAM:-false}
       - STORAGE__URL=${DB_BACKUP__STORAGE_URL}
     volumes:
       - mariadb-data:/var/lib/mysql
