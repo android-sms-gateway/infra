@@ -1,0 +1,97 @@
+name: Autodeploy
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "compose.monitoring.yml"
+      - "prometheus/**"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: autodeploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve changed stacks
+        id: stacks
+        env:
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.event.after }}
+        run: |
+          if [ "${BEFORE//0/}" = "" ]; then
+            echo "::notice::No base commit for this push; skipping autodeploy."
+            echo "monitoring=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          changes=$(git diff --name-only "$BEFORE" "$AFTER")
+          if grep -qE '^(compose\.monitoring\.yml|prometheus/)' <<< "$changes"; then
+            echo "monitoring=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "monitoring=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if grep -q '^prometheus/' <<< "$changes"; then
+            echo "::notice::Config files changed. Confirm STACK_VERSION was bumped in the Portainer monitoring stack env; otherwise redeploy manually."
+          fi
+
+      - name: Trigger monitoring stack update
+        if: steps.stacks.outputs.monitoring == 'true'
+        env:
+          WEBHOOK_URL: ${{ secrets.PORTAINER_WEBHOOK_MONITORING }}
+        run: |
+          if [ -z "$WEBHOOK_URL" ]; then
+            echo "::error::PORTAINER_WEBHOOK_MONITORING secret is not set"
+            exit 1
+          fi
+          curl --fail --silent --show-error --max-time 20 --request POST "$WEBHOOK_URL" > /dev/null
+
+      - name: Wait for monitoring health
+        if: steps.stacks.outputs.monitoring == 'true'
+        env:
+          ROOT_DOMAIN: ${{ vars.ROOT_DOMAIN }}
+        run: |
+          if [ -z "$ROOT_DOMAIN" ]; then
+            echo "::error::ROOT_DOMAIN variable is not set"
+            exit 1
+          fi
+
+          url="https://mon.${ROOT_DOMAIN}/api/health"
+          for attempt in $(seq 1 30); do
+            code=$(curl --silent --show-error --max-time 10 --output /dev/null --write-out '%{http_code}' "$url") || code=000
+            if [ "$code" = "200" ]; then
+              echo "Grafana health OK after ${attempt} attempt(s)"
+              exit 0
+            fi
+            sleep 10
+          done
+
+          echo "::error::Grafana health probe did not return 200: $url"
+          exit 1
+
+      - name: Mark merged pull request as deployed
+        if: steps.stacks.outputs.monitoring == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          COMMIT: ${{ github.event.after }}
+        run: |
+          pr=$(gh api "repos/${REPO}/commits/${COMMIT}/pulls" --jq '.[0].number')
+          if [ -z "$pr" ] || [ "$pr" = "null" ]; then
+            echo "::notice::No pull request associated with ${COMMIT}"
+            exit 0
+          fi
+          gh pr edit "$pr" --repo "$REPO" --add-label deployed

@@ -31,6 +31,7 @@ Everything here is configuration-as-code: no application source code lives in th
     - [Deploy the stacks](#deploy-the-stacks)
     - [Exposed hostnames](#exposed-hostnames)
     - [Update configuration](#update-configuration)
+    - [Autodeploy](#autodeploy)
     - [Backups and metrics](#backups-and-metrics)
   - [📚 Documentation](#-documentation)
   - [🤝 Contributing](#-contributing)
@@ -159,6 +160,19 @@ Compose `configs` are versioned with `STACK_VERSION`. After editing a config fil
 - Backend (`backend/config.yml`) -> `app`
 - Prometheus and Alertmanager configs -> `monitoring`
 
+### Autodeploy
+
+Merges to `master` that touch `compose.monitoring.yml` or `prometheus/**` trigger a redeploy of the `monitoring` stack through its Portainer update webhook (`.github/workflows/autodeploy.yml`). Other stacks are not automated yet and keep the manual deploy flow above. The workflow polls `https://mon.<ROOT_DOMAIN>/api/health` before marking the merged pull request `deployed`; a failed probe fails the job and leaves the pull request unlabeled. Nothing is rolled back automatically.
+
+Repository configuration:
+
+- `PORTAINER_WEBHOOK_MONITORING` (secret): the monitoring stack's Portainer update webhook URL. Treat it as a credential; never log or commit it.
+- `ROOT_DOMAIN` (variable): base domain used to build the health probe URL.
+
+Because Swarm config names are pinned by `STACK_VERSION`, bump that value in the Portainer monitoring stack environment before merging a `prometheus/**` change. A webhook with no new commit is a no-op, so an env-only change needs Portainer's own redeploy. The workflow logs a reminder when config files are in the diff.
+
+To roll back a failed deploy, use Portainer's service rollback or run `docker service rollback monitoring_<service>` on a manager for each affected service.
+
 ### Backups and metrics
 
 - `db-backup` runs on the `DB_BACKUP__SCHEDULE` cron (default `@daily`) and uploads a MariaDB dump to `DB_BACKUP__STORAGE_URL`; it runs as a cron job, so `docker service ps` shows no running tasks between runs.
@@ -175,7 +189,7 @@ Compose `configs` are versioned with `STACK_VERSION`. After editing a config fil
 1. Fork the repository and create a feature branch.
 2. Keep changes scoped to a single concern (a compose file, a config file, or docs).
 3. Open a pull request with a clear description of the change and any verification performed.
-4. Add the `ready` label once the PR passes review, and `deployed` once the change is live.
+4. Add the `ready` label once the PR passes review. For `monitoring` changes, `deployed` is applied automatically after a healthy deploy; for other stacks, add it once the change is live.
 
 Note the automation in `.github/workflows/`:
 
