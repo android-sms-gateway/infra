@@ -4,6 +4,11 @@ on:
   push:
     branches: [master]
     paths:
+      - "compose.infra.yml"
+      - "traefik/**"
+      - "mariadb/**"
+      - "compose.app.yml"
+      - "backend/**"
       - "compose.monitoring.yml"
       - "prometheus/**"
 
@@ -33,20 +38,105 @@ jobs:
         run: |
           if [ "${BEFORE//0/}" = "" ]; then
             echo "::notice::No base commit for this push; skipping autodeploy."
-            echo "monitoring=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "infra=false"
+              echo "app=false"
+              echo "monitoring=false"
+            } >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           changes=$(git diff --name-only "$BEFORE" "$AFTER")
+
+          if grep -qE '^(compose\.infra\.yml|traefik/|mariadb/)' <<< "$changes"; then
+            echo "infra=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "infra=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if grep -qE '^(compose\.app\.yml|backend/)' <<< "$changes"; then
+            echo "app=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "app=false" >> "$GITHUB_OUTPUT"
+          fi
+
           if grep -qE '^(compose\.monitoring\.yml|prometheus/)' <<< "$changes"; then
             echo "monitoring=true" >> "$GITHUB_OUTPUT"
           else
             echo "monitoring=false" >> "$GITHUB_OUTPUT"
           fi
 
-          if grep -q '^prometheus/' <<< "$changes"; then
-            echo "::notice::Config files changed. Confirm STACK_VERSION was bumped in the Portainer monitoring stack env; otherwise redeploy manually."
+          if grep -qE '^(traefik/|mariadb/|backend/config\.yml|prometheus/)' <<< "$changes"; then
+            echo "::notice::Config files changed. Confirm STACK_VERSION was bumped in the affected Portainer stack env; otherwise redeploy manually."
           fi
+
+      - name: Trigger infra stack update
+        if: steps.stacks.outputs.infra == 'true'
+        env:
+          WEBHOOK_URL: ${{ secrets.PORTAINER_WEBHOOK_INFRA }}
+        run: |
+          if [ -z "$WEBHOOK_URL" ]; then
+            echo "::error::PORTAINER_WEBHOOK_INFRA secret is not set"
+            exit 1
+          fi
+          curl --fail --silent --show-error --max-time 20 --request POST "$WEBHOOK_URL" > /dev/null
+
+      - name: Wait for infra health
+        if: steps.stacks.outputs.infra == 'true'
+        env:
+          ROOT_DOMAIN: ${{ vars.ROOT_DOMAIN }}
+        run: |
+          if [ -z "$ROOT_DOMAIN" ]; then
+            echo "::error::ROOT_DOMAIN variable is not set"
+            exit 1
+          fi
+
+          url="https://admin.${ROOT_DOMAIN}/"
+          for attempt in $(seq 1 30); do
+            code=$(curl --silent --show-error --max-time 10 --output /dev/null --write-out '%{http_code}' "$url") || code=000
+            if [ "$code" = "401" ]; then
+              echo "Traefik dashboard auth challenge OK after ${attempt} attempt(s)"
+              exit 0
+            fi
+            sleep 10
+          done
+
+          echo "::error::Traefik dashboard probe did not return 401: $url"
+          exit 1
+
+      - name: Trigger app stack update
+        if: steps.stacks.outputs.app == 'true'
+        env:
+          WEBHOOK_URL: ${{ secrets.PORTAINER_WEBHOOK_APP }}
+        run: |
+          if [ -z "$WEBHOOK_URL" ]; then
+            echo "::error::PORTAINER_WEBHOOK_APP secret is not set"
+            exit 1
+          fi
+          curl --fail --silent --show-error --max-time 20 --request POST "$WEBHOOK_URL" > /dev/null
+
+      - name: Wait for app health
+        if: steps.stacks.outputs.app == 'true'
+        env:
+          ROOT_DOMAIN: ${{ vars.ROOT_DOMAIN }}
+        run: |
+          if [ -z "$ROOT_DOMAIN" ]; then
+            echo "::error::ROOT_DOMAIN variable is not set"
+            exit 1
+          fi
+
+          url="https://dashboard.${ROOT_DOMAIN}/health"
+          for attempt in $(seq 1 30); do
+            code=$(curl --silent --show-error --max-time 10 --output /dev/null --write-out '%{http_code}' "$url") || code=000
+            if [ "$code" = "200" ]; then
+              echo "Web dashboard health OK after ${attempt} attempt(s)"
+              exit 0
+            fi
+            sleep 10
+          done
+
+          echo "::error::Web dashboard health probe did not return 200: $url"
+          exit 1
 
       - name: Trigger monitoring stack update
         if: steps.stacks.outputs.monitoring == 'true'
@@ -83,7 +173,7 @@ jobs:
           exit 1
 
       - name: Mark merged pull request as deployed
-        if: steps.stacks.outputs.monitoring == 'true'
+        if: steps.stacks.outputs.infra == 'true' || steps.stacks.outputs.app == 'true' || steps.stacks.outputs.monitoring == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}

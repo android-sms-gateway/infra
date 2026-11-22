@@ -162,16 +162,24 @@ Compose `configs` are versioned with `STACK_VERSION`. After editing a config fil
 
 ### Autodeploy
 
-Merges to `master` that touch `compose.monitoring.yml` or `prometheus/**` trigger a redeploy of the `monitoring` stack through its Portainer update webhook (`.github/workflows/autodeploy.yml`). Other stacks are not automated yet and keep the manual deploy flow above. The workflow polls `https://mon.<ROOT_DOMAIN>/api/health` before marking the merged pull request `deployed`; a failed probe fails the job and leaves the pull request unlabeled. Nothing is rolled back automatically.
+Merges to `master` redeploy the affected stacks through their Portainer update webhooks (`.github/workflows/autodeploy.yml`). Paths map to stacks as follows:
+
+| Stack        | Paths                                            | Health probe                                  |
+| ------------ | ------------------------------------------------ | --------------------------------------------- |
+| `infra`      | `compose.infra.yml`, `traefik/**`, `mariadb/**`   | `https://admin.<ROOT_DOMAIN>/` (expects 401)  |
+| `app`        | `compose.app.yml`, `backend/**`                   | `https://dashboard.<ROOT_DOMAIN>/health` (200) |
+| `monitoring` | `compose.monitoring.yml`, `prometheus/**`         | `https://mon.<ROOT_DOMAIN>/api/health` (200)  |
+
+Deployments run in that order, one stack at a time. The workflow polls each probe before moving on and marks the merged pull request `deployed` only when every changed stack is healthy. A failed probe fails the job and leaves the pull request unlabeled; nothing is rolled back automatically. The `portainer` stack is not automated because it hosts the deployment mechanism.
 
 Repository configuration:
 
-- `PORTAINER_WEBHOOK_MONITORING` (secret): the monitoring stack's Portainer update webhook URL. Treat it as a credential; never log or commit it.
-- `ROOT_DOMAIN` (variable): base domain used to build the health probe URL.
+- `PORTAINER_WEBHOOK_INFRA`, `PORTAINER_WEBHOOK_APP`, `PORTAINER_WEBHOOK_MONITORING` (secrets): each stack's Portainer update webhook URL. Treat them as credentials; never log or commit them.
+- `ROOT_DOMAIN` (variable): base domain used to build the health probe URLs.
 
-Because Swarm config names are pinned by `STACK_VERSION`, bump that value in the Portainer monitoring stack environment before merging a `prometheus/**` change. A webhook with no new commit is a no-op, so an env-only change needs Portainer's own redeploy. The workflow logs a reminder when config files are in the diff.
+Because Swarm config names are pinned by `STACK_VERSION`, bump that value in the affected Portainer stack environment before merging a config change (Traefik/MariaDB → `infra`, backend → `app`, Prometheus/Alertmanager → `monitoring`). A webhook with no new commit is a no-op, so an env-only change needs Portainer's own redeploy. The workflow logs a reminder when config files are in the diff.
 
-To roll back a failed deploy, use Portainer's service rollback or run `docker service rollback monitoring_<service>` on a manager for each affected service.
+To roll back a failed deploy, use Portainer's service rollback or run `docker service rollback <stack>_<service>` on a manager for each affected service.
 
 ### Backups and metrics
 
@@ -189,7 +197,7 @@ To roll back a failed deploy, use Portainer's service rollback or run `docker se
 1. Fork the repository and create a feature branch.
 2. Keep changes scoped to a single concern (a compose file, a config file, or docs).
 3. Open a pull request with a clear description of the change and any verification performed.
-4. Add the `ready` label once the PR passes review. For `monitoring` changes, `deployed` is applied automatically after a healthy deploy; for other stacks, add it once the change is live.
+4. Add the `ready` label once the PR passes review. For `infra`, `app`, and `monitoring` changes, `deployed` is applied automatically after a healthy deploy; for the `portainer` stack, add it once the change is live.
 
 Note the automation in `.github/workflows/`:
 
